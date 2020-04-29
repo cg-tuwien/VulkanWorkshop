@@ -12,16 +12,16 @@ Accompanying videos to the individual workshop units will be made available on Y
 
 Please prepare your PC by installing the [LunarG Vulkan SDK](https://vulkan.lunarg.com/sdk/home). Ensure that the `VULKAN_SDK` environment variable is set and loaded (log out and back in, or restart your PC).
 
-This repository is pre-configured for usage with Visual Studio 2019, but it should be possible to set it up on other operating systems with relatively little effort. 
+This repository is pre-configured for usage with Visual Studio 2019 on Windows, but it should be possible to set it up on other operating systems with relatively little effort. 
 
 ### Windows Setup 
 
 Besides the Vulkan SDK, the following is recommended
 * Visual Studio 2019 (Community Edition is fine)
 * An installed Windows 10 SDK (use the Visual Studio Installer)
-* Open [`visual_studio\vk_workshop.sln`](visual_studio\vk_workshop.sln), it should build and run right out of the box.
+* Open [`visual_studio\vk_workshop.sln`](visual_studio), it should build and run right out of the box.
 
-### Manual Project Setup
+### Manual Setup
 
 If you would like to set-up the project for a different environment than the pre-configured one, you'll need the following:
 * Install the Vulkan SDK (as mentioned above)
