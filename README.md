@@ -2,7 +2,7 @@
 
 Vulkan Workshop, created for the CESCG 2020
 
-Vulkan is new (relatively) new low-level API from The Khronos Group. It is a completely different type of API than OpenGL. Not only is it more modern, it is much more explicit and notably lower-level than OpenGL. A programmer needs to take care of many things that weren't required to be taken care of with OpenGL. 
+Vulkan is a new (relatively) new low-level API from The Khronos Group. It is a completely different type of API than OpenGL. Not only is it more modern, it is much more explicit and notably lower-level than OpenGL. A programmer needs to take care of many things that weren't required to be taken care of with OpenGL. 
 
 This workshop shall introduce programmers to the basic concepts of the Vulkan API and offers several units where programmers can jump right into the action, without requiring huge initial setup efforts.
 
