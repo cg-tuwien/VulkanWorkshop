@@ -37,7 +37,7 @@ If you would like to set-up the project for a different environment than the pre
     * `glslc -c resources/shaders/vertex_shader.vert -o targetdirectory/shaders/vertex_shader.spv`
     * `glslc -c resources/shaders/fragment_shader.frag -o targetdirectory/shaders/fragment_shader.spv`
     
-In short, the project will try to load images from relative paths `images/*`, and shader files from relative paths `shaders/*`.
+In short, the code will try to load images from relative paths `images/*`, and shader files from relative paths `shaders/*`.
     
 ## Workshop Units
 
