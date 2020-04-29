@@ -33,9 +33,11 @@ If you would like to set-up the project for a different environment than the pre
   * Vulkan SDK's include directory (you'll probably want to use the `VULKAN_SDK` environment variable with `/Include` appended)
 * A custom (post-)build step which performs the following actions (or do it manually): 
   * Copy all images from [`resources/images`](resources/images) to the target directory's subfolder `images/`
-  * Compile shader files using the `glslc` compiler (can be found `VULKAN_SDK`'s `Bin`-subdirectory) as follows:
+  * Compile shader files using the `glslc` compiler (can be found `VULKAN_SDK`'s `Bin`-subdirectory) as follows (where "resources" refers to [`resources/`](resources) and "targetdirectory" refers to your build output directory):
     * `glslc -c resources/shaders/vertex_shader.vert -o targetdirectory/shaders/vertex_shader.spv`
     * `glslc -c resources/shaders/fragment_shader.frag -o targetdirectory/shaders/fragment_shader.spv`
+    
+In short, the project will try to load images from relative paths `images/*`, and shader files from relative paths `shaders/*`.
     
 ## Workshop Units
 
