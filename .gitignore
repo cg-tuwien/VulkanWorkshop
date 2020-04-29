@@ -1,0 +1,42 @@
+## Ignore Visual Studio temporary files, build results, and stuff
+
+# User-specific files
+*.suo
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+intermediate/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+# ...but not inside the "external" directories
+!*/external/**/[Dd]ebug/
+!*/external/**/[Rr]elease/
+!*/external/**/x64/
+!*/external/**/x86/
+!*/external/**/[Bb]in/
+!*/external/**/[Oo]bj/
+!*/external/**/[Ll]og/
+
+# Visual Studio cache/options directory
+.vs/
+
+# Ignore temporary MS-Office files
+~$*.doc*
+~$*.dot*
+~$*.xls*
+~$*.xlt*
+~$*.ppt*
+~$*.pot*
+
+# Ignore files produced by LaTeX
+/_additional_documents/*/*.aux
+/_additional_documents/*/*.bbl
+/_additional_documents/*/*.blg
+/_additional_documents/*/*.log
+/_additional_documents/*/*.out
+/_additional_documents/*/*.pdf
+/_additional_documents/*/*.synctex.gz
