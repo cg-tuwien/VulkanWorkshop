@@ -112,7 +112,7 @@ namespace helpers
 		return std::make_tuple(queueFamilyIndex, logcialDevice.getQueue(queueFamilyIndex, 0u));
 	}
 
-	vk::DeviceMemory Allocate_host_coherent_memory_and_bind_Memory_to_Buffer(
+	vk::DeviceMemory AllocateHostCoherentMemoryForBuffer(
 		const vk::PhysicalDevice physicalDevice,
 		const vk::Device device,
 		const vk::DeviceSize bufferSize,
@@ -149,9 +149,6 @@ namespace helpers
 		// Allocate:
 		auto memory = device.allocateMemory(memoryAllocInfo);
 		
-		// Bind memory to buffer:
-		device.bindBufferMemory(buffer, memory, 0);
-
 		return memory;
 	}
 
@@ -160,6 +157,16 @@ namespace helpers
 		vk::DeviceMemory memory)
 	{
 		device.freeMemory(memory);
+	}
+
+	vk::CommandBuffer AllocateCommandBuffer(
+		const vk::Device device,
+		const vk::CommandPool commandPool)
+	{
+		auto allocInfo = vk::CommandBufferAllocateInfo{}
+    		.setCommandBufferCount(1u)
+    		.setCommandPool(commandPool);
+		return device.allocateCommandBuffers(allocInfo)[0];
 	}
 
 	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> Load_image_into_host_coherent_Buffer(
@@ -186,7 +193,7 @@ namespace helpers
 		auto buffer = device.createBuffer(bufferCreateInfo);
 		
 		// host-coherent memory:
-		auto memory = helpers::Allocate_host_coherent_memory_and_bind_Memory_to_Buffer(physicalDevice, device, 
+		auto memory = helpers::AllocateHostCoherentMemoryForBuffer(physicalDevice, device, 
 			bufferCreateInfo.size,
 			buffer
 		);

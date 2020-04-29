@@ -31,7 +31,7 @@ namespace helpers
 		const vk::Device logcialDevice
 	);
 
-	vk::DeviceMemory Allocate_host_coherent_memory_and_bind_Memory_to_Buffer(
+	vk::DeviceMemory AllocateHostCoherentMemoryForBuffer(
 		const vk::PhysicalDevice physicalDevice,
 		const vk::Device device,
 		const vk::DeviceSize bufferSize,
@@ -42,6 +42,13 @@ namespace helpers
 		const vk::Device device,
 		vk::DeviceMemory memory
 	);
+
+	vk::CommandBuffer AllocateCommandBuffer(
+		const vk::Device device,
+		const vk::CommandPool commandPool
+	);
+
+
 
 	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> Load_image_into_host_coherent_Buffer(
 		const vk::PhysicalDevice physicalDevice,
