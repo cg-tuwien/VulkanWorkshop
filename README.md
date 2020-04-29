@@ -42,7 +42,9 @@ If you would like to set-up the project for a different environment than the pre
 The individual workshop units are listed below. Each unit's initial code version is available on a separate branch. The idea is that you switch to the branch of a unit, check it out, and start working on its tasks.
 * Unit 01: First Steps ([Branch `unit_01`](https://github.com/cg-tuwien/VulkanWorkshop/tree/unit_01))
 
-## External resources/dependencies and their licenses
+---
+
+**External resources/dependencies and their licenses**
 * GLFW (zlib/libpng license) [`external/glfw`](external/glfw)
 * stb_image (MIT license or Public Domain) [`external/stb`](external/stb)
 * tiny obj loader (MIT license) [`external/tinyobj`](external/tinyobj)
