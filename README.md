@@ -16,3 +16,7 @@ The branch of part 2 will contain the solutions.
 * Memory management
 * Handling image layout transitions
 * Using semaphores and selecting proper wait stages
+
+**Navigation**
+* Back to [master](https://github.com/cg-tuwien/VulkanWorkshop)
+* Next part: part2 TBD
