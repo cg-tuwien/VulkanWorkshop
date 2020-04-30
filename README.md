@@ -1,4 +1,4 @@
-# Vulkan Workshop, Part 2
+# Vulkan Workshop, Part 3 "Reusable Semaphores"
 
 This branch contains the code for the initial state of the workshop's part 2.     
 Please checkout this branch in order to work on the tasks of part 2.    
