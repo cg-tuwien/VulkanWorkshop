@@ -156,7 +156,7 @@ int main()
     		.setSignalSemaphoreCount(1u)
     		.setPSignalSemaphores(&renderFinishedSemaphore) // Another semaphore: This will be signalled as soon as this batch of work has completed. 
     		.setPWaitDstStageMask(&waitStage);
-		queue.submit({ submitInfo }, nullptr);
+		queue.submit({ submitInfo }, nullptr); // <--- Hint: the second parameter is yearning for a fence... ;) ;) 
 		
     	// Present the image to the screen:
     	auto presentInfo = vk::PresentInfoKHR{} 
@@ -171,6 +171,35 @@ int main()
     	// this application can not be called a properly behaving real-time rendering application, if we are
     	// waiting for the device to become idle every frame.
     	device.waitIdle(); // TODO Part 3: Remove the waitIdle call and deal with the consequences!
+    	                   //              Watch what happens after the sprite animation is starting to repeat (i.e. frame 101 ff.)
+    	                   //              (If nothing crashes and the application continues to work normally, take a look at
+    	                   //               the console --- at least the validation layers should complain about something.)
+    	                   //
+    	                   //              Ask yourself the following questions:
+    	                   //               - Why did we have the waitIdle call here?
+    	                   //               - How much work are we submitting to the GPU and in which pace?
+    	                   //               - Are we ever waiting on the GPU? Or put differently: How do we sync host and device?
+    	                   //
+    	                   //              If you, after serious consideration, come to the conclusion that work between the
+    	                   //              host and the device needs to be synchronized, there is particular synchronization
+    	                   //              primitive in Vulkan which is made for exactly that: vk::Fence
+    	                   //              Read up on fences in the Vulkan specification, if you decide to use them:
+    	                   //              https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#synchronization-fences
+    	                   //
+    	                   //              One more thing to consider:
+    	                   //              At the top, we have assigned CONCURRENT_FRAMES to a value of 3 (if you haven't changed it).
+    	                   //              Let's assume that we want to maximize FPS of our very demanding application and work on
+    	                   //              #CONCURRENT_FRAMES frames at the same time. What does this mean for using our resources?
+    	                   //              How do we prevent that multiple concurrent frames are using the same resources concurrently?
+    	                   //              
+    	                   //              Note: We have also requested the same amount of swap chain images. It is cool to use the
+    	                   //                    same number of concurrent frames and swap chain images. But just to avoid wrong dogmas:
+    	                   //                    Those two do NOT have to be the same. It is perfectly fine if the number of concurrent
+    	                   //                    frames and the number of swap chain images are set to different values. Of course, there
+    	                   //                    will probably be some implicit dependencies between those two, where diverging numbers
+    	                   //                    will result in different amounts of parallelism. I hope, I've made this point clear.
+    	                   //                    Anyways, in our workshop both are just set to the same value: #CONCURRENT_FRAMES.
+    	                   //              
     	device.destroySemaphore(renderFinishedSemaphore);
     	device.destroySemaphore(imageAvailableSemaphore);
     	
