@@ -47,5 +47,5 @@ Copyright (c) 2012-2019 Syoyo Fujita and many contributors, licensed under the M
 by by Thomas ICHÉ/Unity3D, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication        
 [Free VFX Image Sequences & Flipbooks](https://blogs.unity3d.com/pt/2016/11/28/free-vfx-image-sequences-flipbooks)
 
-**Hextraction Pod** [`resources/models/hextraction_pod.obj` and `models/p_pod_diffuse.jpg`](models)       
+**Hextraction Pod** [`resources/models/hextraction_pod.obj` and `models/p_pod_diffuse.jpg`](resources/models)       
 Copyright (c) Hextraction | Base Player Pod by ComboMash Entertainment Inc, licensed under Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
