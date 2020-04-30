@@ -26,17 +26,12 @@ int main()
 	// ===> 6. Get a queue on the logical device so we can send commands to it
 	auto [queueFamilyIndex, queue] = helpers::get_queue_on_logical_device(physicalDevice, surface, device);
 
-	// ------------------------------------------------------------------------------
-	// Task from Part 1: Query physical device for supported formats and select one!
-	// Task from Part 1: Query physical device for supported presentation modes and select one!
-	// 
 	auto availableFormats = physicalDevice.getSurfaceFormatsKHR(surface);
 	auto availablePresentationModes = physicalDevice.getSurfacePresentModesKHR(surface);
 	auto selectedFormatAndColorSpace = availableFormats[0];
 	std::cout << "selected swap chain format and color space: " << to_string(selectedFormatAndColorSpace.format) << " " << to_string(selectedFormatAndColorSpace.colorSpace) << std::endl;
 	auto selectedPresentationMode = availablePresentationModes[0];
 	std::cout << "selected presentation mode: " << to_string(selectedPresentationMode) << std::endl;
-	// ------------------------------------------------------------------------------
 	
 	// ===> 7. Create a swapchain
 	auto swapchainCreateInfo = vk::SwapchainCreateInfoKHR{}
@@ -53,86 +48,83 @@ int main()
 	// ===> 8. Get all the swapchain's images
 	auto swapchainImages = device.getSwapchainImagesKHR(swapchain);
 
-	// ===> 9. Define memory for a clear color and put it into a buffer
-	auto clearColorData = std::make_unique<std::array<std::array<uint8_t, WIDTH * HEIGHT * 4>, CONCURRENT_FRAMES>>();
-	for (size_t i = 0; i < WIDTH * HEIGHT * 4; i += 4) {
-		// For concurrent frame at index 0:
-		static_assert( 0 < CONCURRENT_FRAMES );
-		(*clearColorData)[0][i + 0] = 255;
-		(*clearColorData)[0][i + 1] =   0;
-		(*clearColorData)[0][i + 2] = 255;
-		(*clearColorData)[0][i + 3] = 255;
-
-		// For concurrent frame at index 1:
-		static_assert( 1 < CONCURRENT_FRAMES );
-		(*clearColorData)[1][i + 0] =   0;
-		(*clearColorData)[1][i + 1] = 255;
-		(*clearColorData)[1][i + 2] = 255;
-		(*clearColorData)[1][i + 3] = 255;
-
-		// For concurrent frame at index 2:
-		static_assert( 2 < CONCURRENT_FRAMES );
-		(*clearColorData)[2][i + 0] = 255;
-		(*clearColorData)[2][i + 1] = 255;
-		(*clearColorData)[2][i + 2] =   0;
-		(*clearColorData)[2][i + 3] = 255;
-	}
-	// Create the buffer:
-	std::array<vk::Buffer, CONCURRENT_FRAMES> clearBuffers;
-	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-		// Describe a new buffer:
-		auto createInfo = vk::BufferCreateInfo{}
-			.setSize(static_cast<vk::DeviceSize>(WIDTH * HEIGHT * 4))
-			.setUsage(vk::BufferUsageFlagBits::eTransferSrc);
-		clearBuffers[i] = device.createBuffer(createInfo);
-		vk::Buffer buffer1;
-	}
-	// ------------------------------------------------------------------------------
-	// Task from Part 1: Use only ONE memory allocation for all buffers, and bind them to different offsets!
-	auto clearColorMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, WIDTH * HEIGHT * 4 * CONCURRENT_FRAMES, device.getBufferMemoryRequirements(clearBuffers[0]));
-	cleanupHandlers.emplace_back([device, clearColorMemory](){	helpers::free_memory(device, clearColorMemory); });
-	// ------------------------------------------------------------------------------
-	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-		
-		// Bind the buffer handle to the memory:
-		device.bindBufferMemory(clearBuffers[i], clearColorMemory, WIDTH * HEIGHT * 4 * i);
-
-		// Copy the colors of your liking into the buffer's memory:
-		auto clearColorMappedMemory = device.mapMemory(
-			clearColorMemory, 
-			WIDTH * HEIGHT * 4 * i, // <--- offset
-			WIDTH * HEIGHT * 4		// <--- size
-		);
-		memcpy(clearColorMappedMemory, (*clearColorData)[i].data(), WIDTH * HEIGHT * 4);
-		device.unmapMemory(clearColorMemory);
-
-		// Make sure to clean up at the end of the application:
-		cleanupHandlers.emplace_back([device, buffer=clearBuffers[i]](){ device.destroyBuffer(buffer); });
-	}
-
+	// ===> 9. Bye bye, clear color buffers, nice to have known you.
+	
 	// ===> 10. Create a command pool so that we can create commands
 	auto commandPoolCreateInfo = vk::CommandPoolCreateInfo{}
 		.setQueueFamilyIndex(queueFamilyIndex);
 	auto commandPool = device.createCommandPool(commandPoolCreateInfo);
 
-	// Showing only a single color is -- for most of us probably -- a bit boring. Let's make something more fancy, shall we?
-	// TODO Part 2: Load 100 images from file, which contain a sprite-animation of an explosion!
-	//              The images can be loaded from: "images/explostion02HD-frame001.tga".."images/explostion02HD-frame100.tga"
-	//              Feel free to use helpers::load_image_into_host_coherent_buffer
+	// ===> 11. Load 100 explosion images from files
+	// ------------------------------------------------------------------------------
+	// Task from Part 2: Load 100 images from file, which contain a sprite-animation of an explosion!
+	// 
+	std::array<std::tuple<vk::Buffer, vk::DeviceMemory, int, int>, 100> explosionImages;
+	for (size_t i = 1; i <= 100; ++i) {
+		auto iToS = "00" + std::to_string(i);
+		explosionImages[i-1] = helpers::load_image_into_host_coherent_buffer(
+			physicalDevice, device, 
+			"images/explosion02HD-frame" + iToS.substr(iToS.length() - 3) + ".tga"
+		);
+		
+		// Make sure to clean up after ourselves:
+		cleanupHandlers.emplace_back([device, tpl = explosionImages[i-1]](){
+			helpers::free_memory(device, std::get<vk::DeviceMemory>(tpl));
+			helpers::destroy_buffer(device, std::get<vk::Buffer>(tpl));
+		});
+	}
+	// ------------------------------------------------------------------------------
 
-	// With these images loaded, we would like to copy them into the swapchain image.. just as we have done with the clear colors in Part 1.
-	// HOWEVER, in order to achieve that, let's not create a new command buffer every frame, but instead, let's do something more Vulkan-esque:
-	// TODO Part 2: Prepare a REUSABLE command buffer for every single one of the explosion-images to copy it into a given swap chain image!
-	//              "Reusable" means: We create it once, let it live until the application's end, and use it whenever required.
-	//              Attention: do not use vk::CommandBufferUsageFlagBits::eOneTimeSubmit for such command buffers, leave the flag away!
+	// ===> 12. Prepare command buffers for each combination explosion-image and swapchain-image :O
+	// ------------------------------------------------------------------------------
+	// Task from Part 2: Prepare a REUSABLE command buffer for every single one of the explosion-images to copy it into a given swap chain image!
+	// 
+	std::array<std::array<vk::CommandBuffer, 100>, CONCURRENT_FRAMES> preparedCommandBuffers;
+	for (size_t si = 0; si < CONCURRENT_FRAMES; ++si) {
+		assert(swapchainImages.size() == CONCURRENT_FRAMES);
+		for (size_t ei = 0; ei < 100; ++ei) {
+    		auto commandBuffer = helpers::allocate_command_buffer(device, commandPool);
+    		commandBuffer.begin(vk::CommandBufferBeginInfo{});
 
-	// ===> 11. Start our render loop and clear those swap chain images!!
+			helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
+				             vk::PipelineStageFlagBits::eTopOfPipe, /* src -> dst */ vk::PipelineStageFlagBits::eTransfer,
+				                                 vk::AccessFlags{}, /* src -> dst */ vk::AccessFlagBits::eTransferWrite,
+				swapchainImages[si],   vk::ImageLayout::eUndefined, /* old -> new */ vk::ImageLayout::eTransferDstOptimal
+			);
+
+			helpers::copy_buffer_to_image(commandBuffer, std::get<vk::Buffer>(explosionImages[ei]), swapchainImages[si], 800, 800);
+			
+			helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
+				                       vk::PipelineStageFlagBits::eTransfer, /* src -> dst */ vk::PipelineStageFlagBits::eBottomOfPipe,
+				                         vk::AccessFlagBits::eTransferWrite, /* src -> dst */ vk::AccessFlags{},
+				swapchainImages[si],   vk::ImageLayout::eTransferDstOptimal, /* old -> new */ vk::ImageLayout::ePresentSrcKHR
+			);
+			
+			commandBuffer.end();
+			preparedCommandBuffers[si][ei] = commandBuffer;
+
+			// Make sure leave the world as the same nice place as it has been before:
+			cleanupHandlers.emplace_back([device, commandPool, commandBuffer](){
+				helpers::free_command_buffer(device, commandPool, commandBuffer);
+			});
+		}
+	}
+	// ------------------------------------------------------------------------------
+
+	// ===> 13. Start our render loop and display a wonderful sprite animation:
 	const double startTime = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
     	auto curTime = glfwGetTime();
-    	// TODO Part 2: Implement the sprite-animation by copying the correct image at the correct time into the correct swap chain image!
-    	//              You will have to implement some timing logic to present the right image at the right time.
-    	//              The sprite animation is probably intended for a 60Hz timing, but other Hz will most likely also look good.
+		// ------------------------------------------------------------------------------
+    	// Task from Part 2: Implement the sprite-animation by copying the correct image at the correct time into the correct swap chain image!
+    	//
+    	static auto lastAniTime = startTime;
+    	static auto explosionAniIndex = size_t{0};
+    	if (curTime - lastAniTime > 0.016667) {
+    		explosionAniIndex = (explosionAniIndex + 1) % 100;
+    		lastAniTime = curTime;
+    	}
+		// ------------------------------------------------------------------------------
     	
     	// Create a semaphore that will be signalled as soon as an image becomes available:
 		auto imageAvailableSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
@@ -140,46 +132,19 @@ int main()
 		auto swapChainImageIndex = device.acquireNextImageKHR(swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, nullptr).value;
     	auto& currentSwapchainImage = swapchainImages[swapChainImageIndex];
 
-    	// As soon as we have the image, let's copy the clear color into it!
-    	// ^ what is meant by "as soon as we have the image" is the following:
-    	//   We record the command buffer right now -- which is most likely BEFORE the
-    	//   requested swap chain image has been acquired.
-    	//   vkAcquireNextImageKHR will signal the imageAvailableSemaphore when is has acquired the image.
-    	//   The very same imageAvailableSemaphore is set as a "wait semaphore" to the VkSubmitInfo below. (*1)
-    	auto commandBuffer = helpers::allocate_command_buffer(device, commandPool);
-    	commandBuffer.begin(vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-		// ------------------------------------------------------------------------------
-		// Task from Part 1: Fix those validation errors by adding suitable image layout transitions!
-		//
-		helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
-			             vk::PipelineStageFlagBits::eTopOfPipe, /* src -> dst */ vk::PipelineStageFlagBits::eTransfer,
-			                                 vk::AccessFlags{}, /* src -> dst */ vk::AccessFlagBits::eTransferWrite,
-			currentSwapchainImage, vk::ImageLayout::eUndefined, /* old -> new */ vk::ImageLayout::eTransferDstOptimal
-		);
-		// ------------------------------------------------------------------------------
-		helpers::copy_buffer_to_image(commandBuffer, clearBuffers[swapChainImageIndex], currentSwapchainImage, 800, 800);
-		// ------------------------------------------------------------------------------
-		// Task from Part 1: Fix those validation errors by adding suitable image layout transitions!
-		//
-		helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
-			                       vk::PipelineStageFlagBits::eTransfer, /* src -> dst */ vk::PipelineStageFlagBits::eBottomOfPipe,
-			                         vk::AccessFlagBits::eTransferWrite, /* src -> dst */ vk::AccessFlags{},
-			currentSwapchainImage, vk::ImageLayout::eTransferDstOptimal, /* old -> new */ vk::ImageLayout::ePresentSrcKHR
-		);
-		// ------------------------------------------------------------------------------
-    	commandBuffer.end();
-
     	// Create a semaphore that will be signalled when rendering has finished:
 		auto renderFinishedSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
+    	
     	// Submit the command buffer
 		// ------------------------------------------------------------------------------
-		// Task from Part 1: Can we wait in a specific/later stage?
-    	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eTransfer; 
+    	// Task from Part 2: Submit the command buffer that we have selected!
+    	//
+    	auto selectedCommandBuffer = preparedCommandBuffers[swapChainImageIndex][explosionAniIndex];
 		// ------------------------------------------------------------------------------
-    	// TODO Part 2: Submit the command buffer that you have selected!
+    	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eTransfer; 
     	auto submitInfo = vk::SubmitInfo{}
     		.setCommandBufferCount(1u)
-    		.setPCommandBuffers(&commandBuffer)
+    		.setPCommandBuffers(&selectedCommandBuffer)
     		.setWaitSemaphoreCount(1u)
     		.setPWaitSemaphores(&imageAvailableSemaphore) // <--- (*1) Wait on the swap chain image to become available
     		.setSignalSemaphoreCount(1u)
@@ -198,7 +163,6 @@ int main()
 
     	device.waitIdle();
     	device.destroySemaphore(renderFinishedSemaphore);
-    	device.freeCommandBuffers(commandPool, 1, &commandBuffer);
     	device.destroySemaphore(imageAvailableSemaphore);
     	
 		glfwPollEvents();
@@ -207,7 +171,7 @@ int main()
     	}
     }
 
-	// ===> 12. Perform cleanup
+	// ===> 14. Perform cleanup
 	for (auto it = cleanupHandlers.rbegin(); it != cleanupHandlers.rend(); ++it) {
 		(*it)();
 	}
