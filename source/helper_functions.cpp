@@ -212,10 +212,11 @@ namespace helpers
 
 	void establish_pipeline_barrier_with_image_layout_transition(
 		vk::CommandBuffer commandBuffer,
-		vk::Image image,
 		vk::PipelineStageFlags srcPipelineStage, vk::PipelineStageFlags dstPipelineStage,
 		vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
-		vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
+		vk::Image image,
+		vk::ImageLayout oldLayout, vk::ImageLayout newLayout
+	)
 	{
 		auto imageMemoryBarrier = vk::ImageMemoryBarrier{};
 		imageMemoryBarrier.srcAccessMask = srcAccessMask;

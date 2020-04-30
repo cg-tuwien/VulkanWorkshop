@@ -100,8 +100,8 @@ int main()
 		// Copy the colors of your liking into the buffer's memory:
 		auto clearColorMappedMemory = device.mapMemory(
 			clearColorMemory, 
-			WIDTH * HEIGHT * 4 * i, // offset
-			WIDTH * HEIGHT * 4		// size
+			WIDTH * HEIGHT * 4 * i, // <--- offset
+			WIDTH * HEIGHT * 4		// <--- size
 		);
 		memcpy(clearColorMappedMemory, (*clearColorData)[i].data(), WIDTH * HEIGHT * 4);
 		device.unmapMemory(clearColorMemory);
@@ -134,18 +134,34 @@ int main()
     	//   The very same imageAvailableSemaphore is set as a "wait semaphore" to the VkSubmitInfo below. (*1)
     	auto commandBuffer = helpers::allocate_command_buffer(device, commandPool);
     	commandBuffer.begin(vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+		// ------------------------------------------------------------------------------
+		// Task from Part 1: Fix those validation errors by adding suitable image layout transitions!
 		//
-    	// Attention:   The following call (which is vkCmdCopyBufferToImage in disguise) is producing validation errors (see console)
-    	// TODO Part 1: Fix those validation errors by adding suitable image layout transitions!
-    	//				Feel free to use helpers::establish_pipeline_barrier_with_image_layout_transition
-    	//				
+		helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
+			             vk::PipelineStageFlagBits::eTopOfPipe, /* src -> dst */ vk::PipelineStageFlagBits::eTransfer,
+			                                 vk::AccessFlags{}, /* src -> dst */ vk::AccessFlagBits::eTransferWrite,
+			currentSwapchainImage, vk::ImageLayout::eUndefined, /* old -> new */ vk::ImageLayout::eTransferDstOptimal
+		);
+		// ------------------------------------------------------------------------------
 		helpers::copy_buffer_to_image(commandBuffer, clearBuffers[swapChainImageIndex], currentSwapchainImage, 800, 800);
+		// ------------------------------------------------------------------------------
+		// Task from Part 1: Fix those validation errors by adding suitable image layout transitions!
+		//
+		helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
+			                       vk::PipelineStageFlagBits::eTransfer, /* src -> dst */ vk::PipelineStageFlagBits::eBottomOfPipe,
+			                         vk::AccessFlagBits::eTransferWrite, /* src -> dst */ vk::AccessFlags{},
+			currentSwapchainImage, vk::ImageLayout::eTransferDstOptimal, /* old -> new */ vk::ImageLayout::ePresentSrcKHR
+		);
+		// ------------------------------------------------------------------------------
     	commandBuffer.end();
 
     	// Create a semaphore that will be signalled when rendering has finished:
 		auto renderFinishedSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
     	// Submit the command buffer
-    	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eAllCommands; // TODO Part 1: Can we wait in a specific/later stage?
+		// ------------------------------------------------------------------------------
+		// Task from Part 1: Can we wait in a specific/later stage?
+    	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eTransfer; 
+		// ------------------------------------------------------------------------------
     	auto submitInfo = vk::SubmitInfo{}
     		.setCommandBufferCount(1u)
     		.setPCommandBuffers(&commandBuffer)
@@ -157,9 +173,8 @@ int main()
 		queue.submit({ submitInfo }, nullptr);
 		
     	// Present the image to the screen:
-    	                                        // Also the present instruction is producing validation errors because the image is not in the right layout.
-    	auto presentInfo = vk::PresentInfoKHR{} // TODO Part 1: Add suitable image layout transitions, s.t. the image is in vk::ImageLayout::ePresentSrcKHR layout!
-    		.setSwapchainCount(1u)              //              Think about where the right place would be to add those image layout transitions!
+    	auto presentInfo = vk::PresentInfoKHR{} 
+    		.setSwapchainCount(1u)              
     		.setPSwapchains(&swapchain)
 			.setPImageIndices(&swapChainImageIndex)
     		.setWaitSemaphoreCount(1u)
