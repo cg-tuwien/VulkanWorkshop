@@ -19,12 +19,25 @@ int main()
 	// ===> 3. Create a surface to draw into
 	auto surface = helpers::create_surface(window, vkInst);
 	// ===> 4. Get a handle to (one) physical device, i.e. to the GPU
-    auto physicalDevice = vkInst.enumeratePhysicalDevices().front(); // TODO Part 1: If you have multiple GPUs (on a laptop, for instance), select the one you want to use for rendering!
+    auto physicalDevice = vkInst.enumeratePhysicalDevices().front(); 
+	std::cout << "selected physical device: " << physicalDevice.getProperties().deviceName << std::endl;
 	// ===> 5. Create a logical device which serves as this application's interface to the physical device
 	auto device = helpers::create_logical_device(physicalDevice, surface);	
 	// ===> 6. Get a queue on the logical device so we can send commands to it
 	auto [queueFamilyIndex, queue] = helpers::get_queue_on_logical_device(physicalDevice, surface, device);
 
+	// ------------------------------------------------------------------------------
+	// Task from Part 1: Query physical device for supported formats and select one!
+	// Task from Part 1: Query physical device for supported presentation modes and select one!
+	// 
+	auto availableFormats = physicalDevice.getSurfaceFormatsKHR(surface);
+	auto availablePresentationModes = physicalDevice.getSurfacePresentModesKHR(surface);
+	auto selectedFormatAndColorSpace = availableFormats[0];
+	std::cout << "selected swap chain format and color space: " << to_string(selectedFormatAndColorSpace.format) << " " << to_string(selectedFormatAndColorSpace.colorSpace) << std::endl;
+	auto selectedPresentationMode = availablePresentationModes[0];
+	std::cout << "selected presentation mode: " << to_string(selectedPresentationMode) << std::endl;
+	// ------------------------------------------------------------------------------
+	
 	// ===> 7. Create a swapchain
 	auto swapchainCreateInfo = vk::SwapchainCreateInfoKHR{}
 		.setSurface(surface)
@@ -32,42 +45,35 @@ int main()
 		.setMinImageCount(CONCURRENT_FRAMES)
 		.setImageArrayLayers(1u)
 		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst)
-		.setImageFormat(vk::Format::eB8G8R8A8Unorm)				// TODO Part 1: Query physical device for supported formats and select one!
-		.setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)	//              ... or actually format + color space combinations
-		.setPresentMode(vk::PresentModeKHR::eFifo);				// TODO Part 1: Query physical device for supported presentation modes and select one!
+		.setImageFormat(selectedFormatAndColorSpace.format)				
+		.setImageColorSpace(selectedFormatAndColorSpace.colorSpace)
+		.setPresentMode(selectedPresentationMode);				
 	auto swapchain = device.createSwapchainKHR(swapchainCreateInfo);
 
 	// ===> 8. Get all the swapchain's images
 	auto swapchainImages = device.getSwapchainImagesKHR(swapchain);
-
-	//*****************
-	// Here's plan #1:
-	//   We are going to implement manual clearing of our swapchain images (a.k.a. backbuffer images).
-	//   For this, we'll fill a 800x800 sized buffer (with 4 color components) and set the chosen clear
-	//   color to every pixel.
-	//   When we have that, we're going to copy it to the swapchain image.
 
 	// ===> 9. Define memory for a clear color and put it into a buffer
 	auto clearColorData = std::make_unique<std::array<std::array<uint8_t, WIDTH * HEIGHT * 4>, CONCURRENT_FRAMES>>();
 	for (size_t i = 0; i < WIDTH * HEIGHT * 4; i += 4) {
 		// For concurrent frame at index 0:
 		static_assert( 0 < CONCURRENT_FRAMES );
-		(*clearColorData)[0][i + 0] =   0; // TODO Part 1: Set a clear color of your liking!
+		(*clearColorData)[0][i + 0] = 255;
 		(*clearColorData)[0][i + 1] =   0;
 		(*clearColorData)[0][i + 2] = 255;
 		(*clearColorData)[0][i + 3] = 255;
 
 		// For concurrent frame at index 1:
 		static_assert( 1 < CONCURRENT_FRAMES );
-		(*clearColorData)[1][i + 0] =   0; // TODO Part 1: Set a clear color of your liking!
+		(*clearColorData)[1][i + 0] =   0;
 		(*clearColorData)[1][i + 1] = 255;
-		(*clearColorData)[1][i + 2] =   0;
+		(*clearColorData)[1][i + 2] = 255;
 		(*clearColorData)[1][i + 3] = 255;
 
 		// For concurrent frame at index 2:
 		static_assert( 2 < CONCURRENT_FRAMES );
-		(*clearColorData)[2][i + 0] = 255; // TODO Part 1: Set a clear color of your liking!
-		(*clearColorData)[2][i + 1] =   0;
+		(*clearColorData)[2][i + 0] = 255;
+		(*clearColorData)[2][i + 1] = 255;
 		(*clearColorData)[2][i + 2] =   0;
 		(*clearColorData)[2][i + 3] = 255;
 	}
@@ -80,22 +86,28 @@ int main()
 			.setUsage(vk::BufferUsageFlagBits::eTransferSrc);
 		clearBuffers[i] = device.createBuffer(createInfo);
 		vk::Buffer buffer1;
-		// Allocate the memory (we want host-coherent memory):
-		auto memory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, createInfo.size, device.getBufferMemoryRequirements(clearBuffers[i]));
-
+	}
+	// ------------------------------------------------------------------------------
+	// Task from Part 1: Use only ONE memory allocation for all buffers, and bind them to different offsets!
+	auto clearColorMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, WIDTH * HEIGHT * 4 * CONCURRENT_FRAMES, device.getBufferMemoryRequirements(clearBuffers[0]));
+	cleanupHandlers.emplace_back([device, clearColorMemory](){	helpers::free_memory(device, clearColorMemory); });
+	// ------------------------------------------------------------------------------
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+		
 		// Bind the buffer handle to the memory:
-		device.bindBufferMemory(clearBuffers[i], memory, 0); // TODO Part 1: Use only ONE memory allocation for all buffers, and bind them to different offsets!
+		device.bindBufferMemory(clearBuffers[i], clearColorMemory, WIDTH * HEIGHT * 4 * i);
 
 		// Copy the colors of your liking into the buffer's memory:
-		auto clearColorMappedMemory = device.mapMemory(memory, 0, createInfo.size);
-		memcpy(clearColorMappedMemory, (*clearColorData)[i].data(), createInfo.size);
-		device.unmapMemory(memory);
+		auto clearColorMappedMemory = device.mapMemory(
+			clearColorMemory, 
+			WIDTH * HEIGHT * 4 * i, // offset
+			WIDTH * HEIGHT * 4		// size
+		);
+		memcpy(clearColorMappedMemory, (*clearColorData)[i].data(), WIDTH * HEIGHT * 4);
+		device.unmapMemory(clearColorMemory);
 
 		// Make sure to clean up at the end of the application:
-		cleanupHandlers.emplace_back([device, buffer=clearBuffers[i], memory](){
-			helpers::free_memory(device, memory);
-			device.destroyBuffer(buffer);
-		});
+		cleanupHandlers.emplace_back([device, buffer=clearBuffers[i]](){ device.destroyBuffer(buffer); });
 	}
 
 	// ===> 10. Create a command pool so that we can create commands
