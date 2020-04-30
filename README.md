@@ -1,6 +1,8 @@
 # Vulkan Workshop, Part 1
 
-This branch contains the code for the initial state of the workshop's part 1.
+This branch contains the code for the initial state of the workshop's part 1.     
+Please checkout this branch in order to work on the tasks of part 1.    
+The branch of part 2 will contain the solutions.
 
 **Preparations** 
 * Make sure to have read the [`master` branch's `README.md`](https://github.com/cg-tuwien/VulkanWorkshop) file
@@ -8,7 +10,7 @@ This branch contains the code for the initial state of the workshop's part 1.
 * Watch the Vulkan Workshop, Part 1 video (TBD)
 * Read further documentation and instructions directly in the source code
 
-**Tasks*
+**Tasks**
 * Physical device selection
 * Swap chain image format and presentation mode selection
 * Memory management
