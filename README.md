@@ -44,7 +44,9 @@ In short, the code will try to load images from relative paths `images/*`, model
 **Includes**   
 For all required `#include` statements, please make sure to include everything that is included in [`source/pch.h`](source/pch.h)! You can probably just include `pch.h`.
 
-## Code
+## About the code of this workshop
+
+Modern C++ is used throughout this workshop's code.
 
 **Vulkan-Hpp**     
 This tutorial uses Vulkan-Hpp which are C++ bindings for the Vulkan C API. It is a preference of taste, but they can make development a bit more convenient. 
