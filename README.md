@@ -15,5 +15,5 @@ The branch of part 3 will contain the solutions.
 
 **Navigation**
 * Back to [master](https://github.com/cg-tuwien/VulkanWorkshop)
-* Previous part: [Part 1](https://github.com/cg-tuwien/VulkanWorkshop/tree/part1)
-* Next part: Part 3 TBD
+* Previous part: [Part 2](https://github.com/cg-tuwien/VulkanWorkshop/tree/part2)
+* Next part: Part 4 TBD
