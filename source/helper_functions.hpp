@@ -132,8 +132,10 @@ namespace helpers
 	// coordinates (vec2) into two newly created, host-coherent buffers.
 	// Returs a tuple containing:
 	//  <0>: the buffer handle to the positions buffer
-	//  <1>: the buffer handle to the texture coordinates buffer
-	std::tuple<vk::Buffer, vk::Buffer> load_positions_and_texture_coordinates_of_obj(
+	//  <1>: memory handle to the position buffer's backing memory
+	//  <2>: the buffer handle to the texture coordinates buffer
+	//  <3>: memory handle to the texture coordinates buffer's backing memory
+	std::tuple<vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_of_obj(
 		const std::string modelPath,
 		const vk::Device device,
 		const vk::PhysicalDevice physicalDevice,

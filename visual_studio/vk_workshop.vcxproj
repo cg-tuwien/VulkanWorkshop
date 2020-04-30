@@ -81,7 +81,7 @@
     <CustomBuildStep>
       <Command>if not exist "$(TargetDir)images" mkdir "$(TargetDir)images"
 xcopy "$(SolutionDir)..\resources\images\*.*" "$(TargetDir)images" /Y /D
-if not exist "$(TargetDir)images" mkdir "$(TargetDir)models"
+if not exist "$(TargetDir)models" mkdir "$(TargetDir)models"
 xcopy "$(SolutionDir)..\resources\models\*.*" "$(TargetDir)models" /Y /D
 if not exist "$(TargetDir)shaders" mkdir "$(TargetDir)shaders"
 "$(VULKAN_SDK)\Bin\glslc.exe" -c "$(SolutionDir)..\resources\shaders\vertex_shader.vert" -o "$(TargetDir)shaders\vertex_shader.spv"
@@ -115,7 +115,7 @@ if not exist "$(TargetDir)shaders" mkdir "$(TargetDir)shaders"
     <CustomBuildStep>
       <Command>if not exist "$(TargetDir)images" mkdir "$(TargetDir)images"
 xcopy "$(SolutionDir)..\resources\images\*.*" "$(TargetDir)images" /Y /D
-if not exist "$(TargetDir)images" mkdir "$(TargetDir)models"
+if not exist "$(TargetDir)models" mkdir "$(TargetDir)models"
 xcopy "$(SolutionDir)..\resources\models\*.*" "$(TargetDir)models" /Y /D
 if not exist "$(TargetDir)shaders" mkdir "$(TargetDir)shaders"
 "$(VULKAN_SDK)\Bin\glslc.exe" -c "$(SolutionDir)..\resources\shaders\vertex_shader.vert" -o "$(TargetDir)shaders\vertex_shader.spv"

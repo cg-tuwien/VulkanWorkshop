@@ -104,7 +104,16 @@ int main()
 	}
 
 	// ===> 13. Load a 3D model from file and store it into a host coherent buffer
-	auto [vertexBufferPositions, vertexBufferTexCoords] = helpers::load_positions_and_texture_coordinates_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
+	auto [vertexBufferPositions, positionsMemory, vertexBufferTexCoords, texCoordsMemory]
+		= helpers::load_positions_and_texture_coordinates_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
+	
+	cleanupHandlers.emplace_back([device, posBfr = vertexBufferPositions, posMem = positionsMemory, tcBfr = vertexBufferTexCoords, tcMem = texCoordsMemory](){
+		helpers::free_memory(device, tcMem);
+		helpers::destroy_buffer(device, tcBfr);
+		helpers::free_memory(device, posMem);
+		helpers::destroy_buffer(device, posBfr);
+	});
+	
 	// TODO: next steps:
 	//  - create depth image
 	//  - create image views

@@ -122,7 +122,7 @@ namespace helpers
 		const vk::MemoryRequirements memoryRequirements)
 	{
 		auto memoryAllocInfo = vk::MemoryAllocateInfo{}
-			.setAllocationSize(bufferSize)
+			.setAllocationSize(std::max(bufferSize, memoryRequirements.size))
 			.setMemoryTypeIndex([&]() {
 					// Get memory types supported by the physical device:
 					auto memoryProperties = physicalDevice.getMemoryProperties();
@@ -286,7 +286,7 @@ namespace helpers
 		device.destroy();
 	}
 
-	std::tuple<vk::Buffer, vk::Buffer> load_positions_and_texture_coordinates_of_obj(
+	std::tuple<vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_of_obj(
 		const std::string modelPath,
 		const vk::Device device,
 		const vk::PhysicalDevice physicalDevice,
@@ -330,20 +330,19 @@ namespace helpers
 			.setSize(static_cast<vk::DeviceSize>(sizeof(positions[0]) * positions.size()))
 			.setUsage(vk::BufferUsageFlagBits::eVertexBuffer); // <--- Mind the usage flags!
 		auto posBuffer = device.createBuffer(posBufferCreateInfo);
-		{
-			// Allocate backing memory:
-			auto posMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
-				posBufferCreateInfo.size,
-				device.getBufferMemoryRequirements(posBuffer)
-			);
 
-			device.bindBufferMemory(posBuffer, posMemory, 0);
-			
-			// Copy the positions into the buffer:
-			auto posMappedMemory = device.mapMemory(posMemory, 0, posBufferCreateInfo.size);
-			memcpy(posMappedMemory, positions.data(), posBufferCreateInfo.size);
-			device.unmapMemory(posMemory);
-		}
+		// Allocate backing memory:
+		auto posMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
+			posBufferCreateInfo.size,
+			device.getBufferMemoryRequirements(posBuffer)
+		);
+
+		device.bindBufferMemory(posBuffer, posMemory, 0);
+		
+		// Copy the positions into the buffer:
+		auto posMappedMemory = device.mapMemory(posMemory, 0, posBufferCreateInfo.size);
+		memcpy(posMappedMemory, positions.data(), posBufferCreateInfo.size);
+		device.unmapMemory(posMemory);
 
 		// 2. TEXTURE COORDINATES BUFFER
 		// Create the buffer:
@@ -351,23 +350,22 @@ namespace helpers
 			.setSize(static_cast<vk::DeviceSize>(sizeof(textureCoordinates[0]) * textureCoordinates.size()))
 			.setUsage(vk::BufferUsageFlagBits::eVertexBuffer); // <--- Mind the usage flags!
 		auto texcoBuffer = device.createBuffer(texcoBufferCreateInfo);
-		{
-			// Allocate backing memory:
-			auto texcoMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
-				texcoBufferCreateInfo.size,
-				device.getBufferMemoryRequirements(texcoBuffer)
-			);
+		
+		// Allocate backing memory:
+		auto texcoMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
+			texcoBufferCreateInfo.size,
+			device.getBufferMemoryRequirements(texcoBuffer)
+		);
 
-			device.bindBufferMemory(texcoBuffer, texcoMemory, 0);
-			
-			// Copy the texture coordinates into the buffer:
-			auto texcoMappedMemory = device.mapMemory(texcoMemory, 0, texcoBufferCreateInfo.size);
-			memcpy(texcoMappedMemory, textureCoordinates.data(), texcoBufferCreateInfo.size);
-			device.unmapMemory(texcoMemory);
-		}
+		device.bindBufferMemory(texcoBuffer, texcoMemory, 0);
+		
+		// Copy the texture coordinates into the buffer:
+		auto texcoMappedMemory = device.mapMemory(texcoMemory, 0, texcoBufferCreateInfo.size);
+		memcpy(texcoMappedMemory, textureCoordinates.data(), texcoBufferCreateInfo.size);
+		device.unmapMemory(texcoMemory);
 
 		// Done => return:
-		return std::make_tuple(posBuffer, texcoBuffer);
+		return std::make_tuple(posBuffer, posMemory, texcoBuffer, texcoMemory);
 	}
 
 }
