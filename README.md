@@ -66,3 +66,5 @@ For more information, please refer to [KhronosGroup/Vulkan-Hpp](https://github.c
 
 The individual workshop units are listed below. Each unit's initial code version is available on a separate branch. The idea is that you switch to the branch of a unit, check it out, and start working on its tasks.
 * [Part 1: First Steps](https://github.com/cg-tuwien/VulkanWorkshop/tree/part1)
+* [Part 2: Reusable Command Buffers](https://github.com/cg-tuwien/VulkanWorkshop/tree/part2)
+* [Part 3: Reusable Semaphores](https://github.com/cg-tuwien/VulkanWorkshop/tree/part3)
