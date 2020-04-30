@@ -125,6 +125,7 @@ int main()
     		lastAniTime = curTime;
     	}
 		// ------------------------------------------------------------------------------
+
     	
     	// Create a semaphore that will be signalled as soon as an image becomes available:
 		auto imageAvailableSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
@@ -134,6 +135,11 @@ int main()
 
     	// Create a semaphore that will be signalled when rendering has finished:
 		auto renderFinishedSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
+
+    	// In addition to reusing our command buffers, we should strive to also reuse our semaphores.
+    	// There is actually no point in creating new ones every frame. After a semaphore has been signalled, it can be used again.
+    	// TODO Part 3: Do not create new semaphores every frame but create them only once and reuse them!
+    	//              This applies to both, the imageAvailableSemaphore and the renderFinishedSemaphore
     	
     	// Submit the command buffer
 		// ------------------------------------------------------------------------------
@@ -161,7 +167,10 @@ int main()
     		.setPWaitSemaphores(&renderFinishedSemaphore); // Wait until rendering has finished (until vkQueueSubmit has signalled the renderFinishedSemaphore)
     	queue.presentKHR(presentInfo);
 
-    	device.waitIdle();
+    	// The following line of code has probably left a nasty taste ever since you've first encountered it.
+    	// this application can not be called a properly behaving real-time rendering application, if we are
+    	// waiting for the device to become idle every frame.
+    	device.waitIdle(); // TODO Part 3: Remove the waitIdle call and deal with the consequences!
     	device.destroySemaphore(renderFinishedSemaphore);
     	device.destroySemaphore(imageAvailableSemaphore);
     	
