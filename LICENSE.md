@@ -43,9 +43,9 @@ TB, Copyright (c) by Sean Barrett, licensed under the MIT License and released i
 **tiny obj loader** [`external/tinyobj`](external/tinyobj)      
 Copyright (c) 2012-2019 Syoyo Fujita and many contributors, licensed under the MIT License
 
-**Explosion Images** [`images/explosion02HD-frame*.tga`](images)      
+**Explosion Images** [`resources/images/explosion02HD-frame*.tga`](resources/images)      
 by by Thomas ICHÉ/Unity3D, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication        
 [Free VFX Image Sequences & Flipbooks](https://blogs.unity3d.com/pt/2016/11/28/free-vfx-image-sequences-flipbooks)
 
-**Hextraction Pod** [`models/hextraction_pod.obj` and `models/p_pod_diffuse.jpg`](models)       
+**Hextraction Pod** [`resources/models/hextraction_pod.obj` and `models/p_pod_diffuse.jpg`](models)       
 Copyright (c) Hextraction | Base Player Pod by ComboMash Entertainment Inc, licensed under Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
