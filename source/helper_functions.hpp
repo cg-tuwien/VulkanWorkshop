@@ -128,4 +128,16 @@ namespace helpers
 		vk::Image image, uint32_t width, uint32_t height
 	);
 
+	// Loads the given 3D .obj model from file, and load its positions (vec3) and texture
+	// coordinates (vec2) into two newly created, host-coherent buffers.
+	// Returs a tuple containing:
+	//  <0>: the buffer handle to the positions buffer
+	//  <1>: the buffer handle to the texture coordinates buffer
+	std::tuple<vk::Buffer, vk::Buffer> load_positions_and_texture_coordinates_of_obj(
+		const std::string modelPath,
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		std::string submeshNamesToExclude = ""
+	);
+
 }

@@ -103,6 +103,17 @@ int main()
 		}
 	}
 
+	// ===> 13. Load a 3D model from file and store it into a host coherent buffer
+	auto [vertexBufferPositions, vertexBufferTexCoords] = helpers::load_positions_and_texture_coordinates_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
+	// TODO: next steps:
+	//  - create depth image
+	//  - create image views
+	//  - create framebuffer
+	//  - create renderpass
+	//  - create graphics pipeline
+	//  - rendurrrr
+
+	// ===> 14. Create image available semaphores, render finished semaphores, and fences, one of each PER FRAME IN FLIGHT:
 	// ------------------------------------------------------------------------------
    	// Task from Part 3: Do not create new semaphores every frame but create them only once and reuse them!
    	// 
@@ -123,7 +134,7 @@ int main()
 	}
 	// ------------------------------------------------------------------------------
 
-	// ===> 13. Start our render loop and display a wonderful sprite animation, reuse semaphores and embrace multiple frames in flight:
+	// ===> 15. Start our render loop and display a wonderful sprite animation, reuse semaphores and embrace multiple frames in flight:
 	const double startTime = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
     	auto curTime = glfwGetTime();

@@ -218,8 +218,8 @@ namespace helpers
 		device.bindBufferMemory(buffer, memory, 0);
 		
 		// Copy the image's data into the buffer
-		auto clearColorMappedMemory = device.mapMemory(memory, 0, bufferCreateInfo.size);
-		memcpy(clearColorMappedMemory, pixels, bufferCreateInfo.size);
+		auto mappedMemory = device.mapMemory(memory, 0, bufferCreateInfo.size);
+		memcpy(mappedMemory, pixels, bufferCreateInfo.size);
 		device.unmapMemory(memory);
 
 		stbi_image_free(pixels);
@@ -285,4 +285,89 @@ namespace helpers
 	{
 		device.destroy();
 	}
+
+	std::tuple<vk::Buffer, vk::Buffer> load_positions_and_texture_coordinates_of_obj(
+		const std::string modelPath,
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		std::string submeshNamesToExclude)
+	{
+		// This code is borrowed from Alexander Overvoorde's Vulkan Tutorial, but has been modified:
+		
+		tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.c_str())) {
+            throw std::runtime_error(warn + err);
+        }
+
+		std::vector<glm::vec3> positions;
+		std::vector<glm::vec2> textureCoordinates;
+		
+        for (const auto& shape : shapes) {
+        	if (!submeshNamesToExclude.empty() && shape.name.find("tile") != std::string::npos) {
+        		continue;
+        	}
+        	
+            for (const auto& index : shape.mesh.indices) {
+                positions.emplace_back(
+					attrib.vertices[3 * index.vertex_index + 0], 
+					attrib.vertices[3 * index.vertex_index + 1], 
+					attrib.vertices[3 * index.vertex_index + 2]
+				);
+				textureCoordinates.emplace_back(
+					attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+				);
+            }
+        }
+
+		// 1. POSITIONS BUFFER
+		// Create the buffer:
+		auto posBufferCreateInfo = vk::BufferCreateInfo{}
+			.setSize(static_cast<vk::DeviceSize>(sizeof(positions[0]) * positions.size()))
+			.setUsage(vk::BufferUsageFlagBits::eVertexBuffer); // <--- Mind the usage flags!
+		auto posBuffer = device.createBuffer(posBufferCreateInfo);
+		{
+			// Allocate backing memory:
+			auto posMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
+				posBufferCreateInfo.size,
+				device.getBufferMemoryRequirements(posBuffer)
+			);
+
+			device.bindBufferMemory(posBuffer, posMemory, 0);
+			
+			// Copy the positions into the buffer:
+			auto posMappedMemory = device.mapMemory(posMemory, 0, posBufferCreateInfo.size);
+			memcpy(posMappedMemory, positions.data(), posBufferCreateInfo.size);
+			device.unmapMemory(posMemory);
+		}
+
+		// 2. TEXTURE COORDINATES BUFFER
+		// Create the buffer:
+		auto texcoBufferCreateInfo = vk::BufferCreateInfo{}
+			.setSize(static_cast<vk::DeviceSize>(sizeof(textureCoordinates[0]) * textureCoordinates.size()))
+			.setUsage(vk::BufferUsageFlagBits::eVertexBuffer); // <--- Mind the usage flags!
+		auto texcoBuffer = device.createBuffer(texcoBufferCreateInfo);
+		{
+			// Allocate backing memory:
+			auto texcoMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
+				texcoBufferCreateInfo.size,
+				device.getBufferMemoryRequirements(texcoBuffer)
+			);
+
+			device.bindBufferMemory(texcoBuffer, texcoMemory, 0);
+			
+			// Copy the texture coordinates into the buffer:
+			auto texcoMappedMemory = device.mapMemory(texcoMemory, 0, texcoBufferCreateInfo.size);
+			memcpy(texcoMappedMemory, textureCoordinates.data(), texcoBufferCreateInfo.size);
+			device.unmapMemory(texcoMemory);
+		}
+
+		// Done => return:
+		return std::make_tuple(posBuffer, texcoBuffer);
+	}
+
 }
