@@ -160,6 +160,13 @@ namespace helpers
 		device.freeMemory(memory);
 	}
 
+	void destroy_buffer(
+		const vk::Device device,
+		vk::Buffer buffer)
+	{
+		device.destroyBuffer(buffer);
+	}
+	
 	vk::CommandBuffer allocate_command_buffer(
 		const vk::Device device,
 		const vk::CommandPool commandPool)
@@ -168,6 +175,14 @@ namespace helpers
     		.setCommandBufferCount(1u)
     		.setCommandPool(commandPool);
 		return device.allocateCommandBuffers(allocInfo)[0];
+	}
+
+	void free_command_buffer(
+		const vk::Device device,
+		const vk::CommandPool commandPool,
+		vk::CommandBuffer commandBuffer)
+	{
+		device.freeCommandBuffers(commandPool, 1u, &commandBuffer);
 	}
 
 	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> load_image_into_host_coherent_buffer(
@@ -199,6 +214,8 @@ namespace helpers
 			bufferCreateInfo.size,
 			device.getBufferMemoryRequirements(buffer)
 		);
+
+		device.bindBufferMemory(buffer, memory, 0);
 		
 		// Copy the image's data into the buffer
 		auto clearColorMappedMemory = device.mapMemory(memory, 0, bufferCreateInfo.size);
