@@ -56,9 +56,6 @@ int main()
 	auto commandPool = device.createCommandPool(commandPoolCreateInfo);
 
 	// ===> 11. Load 100 explosion images from files
-	// ------------------------------------------------------------------------------
-	// Task from Part 2: Load 100 images from file, which contain a sprite-animation of an explosion!
-	// 
 	std::array<std::tuple<vk::Buffer, vk::DeviceMemory, int, int>, 100> explosionImages;
 	for (size_t i = 1; i <= 100; ++i) {
 		auto iToS = "00" + std::to_string(i);
@@ -73,12 +70,8 @@ int main()
 			helpers::destroy_buffer(device, std::get<vk::Buffer>(tpl));
 		});
 	}
-	// ------------------------------------------------------------------------------
 
 	// ===> 12. Prepare command buffers for each combination explosion-image and swapchain-image :O
-	// ------------------------------------------------------------------------------
-	// Task from Part 2: Prepare a REUSABLE command buffer for every single one of the explosion-images to copy it into a given swap chain image!
-	// 
 	std::array<std::array<vk::CommandBuffer, 100>, CONCURRENT_FRAMES> preparedCommandBuffers;
 	for (size_t si = 0; si < CONCURRENT_FRAMES; ++si) {
 		assert(swapchainImages.size() == CONCURRENT_FRAMES);
@@ -109,54 +102,65 @@ int main()
 			});
 		}
 	}
+
+	// ------------------------------------------------------------------------------
+   	// Task from Part 3: Do not create new semaphores every frame but create them only once and reuse them!
+   	// 
+   	// Okay, why do we need multiple semaphores and even fences now?
+   	// Because we have removed the waitIdle call, we are never synchronizing the host with the device.
+   	// Our application should be able to work on #CONCURRENT_FRAMES frames at the same time, however.
+   	// Therefore -- if there are #CONCURRENT_FRAMES frames at any given time -- we have to have the
+   	// same amount of concurrently usable resources at any given time.
+   	// In order to synchronize the host with the device (i.e. wait on the CPU if the GPU is running
+   	// ahead by more than #CONCURRENT_FRAMES frames), we can wait using fences.
+   	std::array<vk::Semaphore, CONCURRENT_FRAMES> imageAvailableSemaphores;
+	std::array<vk::Semaphore, CONCURRENT_FRAMES> renderFinishedSemaphores;
+	std::array<vk::Fence, CONCURRENT_FRAMES> syncHostWithDeviceFence;
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+		imageAvailableSemaphores[i] = device.createSemaphore(vk::SemaphoreCreateInfo{});
+		renderFinishedSemaphores[i] = device.createSemaphore(vk::SemaphoreCreateInfo{});
+		syncHostWithDeviceFence[i] = device.createFence(vk::FenceCreateInfo{}.setFlags(vk::FenceCreateFlagBits::eSignaled));
+	}
 	// ------------------------------------------------------------------------------
 
-	// ===> 13. Start our render loop and display a wonderful sprite animation:
+	// ===> 13. Start our render loop and display a wonderful sprite animation, reuse semaphores and embrace multiple frames in flight:
 	const double startTime = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
     	auto curTime = glfwGetTime();
-		// ------------------------------------------------------------------------------
-    	// Task from Part 2: Implement the sprite-animation by copying the correct image at the correct time into the correct swap chain image!
-    	//
     	static auto lastAniTime = startTime;
     	static auto explosionAniIndex = size_t{0};
     	if (curTime - lastAniTime > 0.016667) {
     		explosionAniIndex = (explosionAniIndex + 1) % 100;
     		lastAniTime = curTime;
     	}
-		// ------------------------------------------------------------------------------
 
+		// ------------------------------------------------------------------------------
+    	// We have to make sure that not more than #CONCURRENT_FRAMES are in flight at
+    	// the same time. We can use fences to ensure that. 
+    	// 
+		static auto frameInFlightIndex = size_t{0};
+    	frameInFlightIndex = (frameInFlightIndex + 1) % CONCURRENT_FRAMES;
+
+    	device.waitForFences(1u, &syncHostWithDeviceFence[frameInFlightIndex], VK_TRUE, std::numeric_limits<uint64_t>::max());
+    	device.resetFences(1u, &syncHostWithDeviceFence[frameInFlightIndex]);
+		// ------------------------------------------------------------------------------
     	
-    	// Create a semaphore that will be signalled as soon as an image becomes available:
-		auto imageAvailableSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
     	// Request the next image (we'll get the index returned, we already have gotten the image handles in ===> 8.):
-		auto swapChainImageIndex = device.acquireNextImageKHR(swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, nullptr).value;
+		auto swapChainImageIndex = device.acquireNextImageKHR(swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[frameInFlightIndex], nullptr).value;
     	auto& currentSwapchainImage = swapchainImages[swapChainImageIndex];
 
-    	// Create a semaphore that will be signalled when rendering has finished:
-		auto renderFinishedSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
-
-    	// In addition to reusing our command buffers, we should strive to also reuse our semaphores.
-    	// There is actually no point in creating new ones every frame. After a semaphore has been signalled, it can be used again.
-    	// TODO Part 3: Do not create new semaphores every frame but create them only once and reuse them!
-    	//              This applies to both, the imageAvailableSemaphore and the renderFinishedSemaphore
-    	
     	// Submit the command buffer
-		// ------------------------------------------------------------------------------
-    	// Task from Part 2: Submit the command buffer that we have selected!
-    	//
     	auto selectedCommandBuffer = preparedCommandBuffers[swapChainImageIndex][explosionAniIndex];
-		// ------------------------------------------------------------------------------
     	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eTransfer; 
     	auto submitInfo = vk::SubmitInfo{}
     		.setCommandBufferCount(1u)
     		.setPCommandBuffers(&selectedCommandBuffer)
     		.setWaitSemaphoreCount(1u)
-    		.setPWaitSemaphores(&imageAvailableSemaphore) // <--- (*1) Wait on the swap chain image to become available
+    		.setPWaitSemaphores(&imageAvailableSemaphores[frameInFlightIndex]) // <--- (*1) Wait on the swap chain image to become available
     		.setSignalSemaphoreCount(1u)
-    		.setPSignalSemaphores(&renderFinishedSemaphore) // Another semaphore: This will be signalled as soon as this batch of work has completed. 
+    		.setPSignalSemaphores(&renderFinishedSemaphores[frameInFlightIndex]) // Another semaphore: This will be signalled as soon as this batch of work has completed. 
     		.setPWaitDstStageMask(&waitStage);
-		queue.submit({ submitInfo }, nullptr);
+		queue.submit({ submitInfo }, syncHostWithDeviceFence[frameInFlightIndex]);
 		
     	// Present the image to the screen:
     	auto presentInfo = vk::PresentInfoKHR{} 
@@ -164,15 +168,21 @@ int main()
     		.setPSwapchains(&swapchain)
 			.setPImageIndices(&swapChainImageIndex)
     		.setWaitSemaphoreCount(1u)
-    		.setPWaitSemaphores(&renderFinishedSemaphore); // Wait until rendering has finished (until vkQueueSubmit has signalled the renderFinishedSemaphore)
+    		.setPWaitSemaphores(&renderFinishedSemaphores[frameInFlightIndex]); // Wait until rendering has finished (until vkQueueSubmit has signalled the renderFinishedSemaphore)
     	queue.presentKHR(presentInfo);
 
-    	// The following line of code has probably left a nasty taste ever since you've first encountered it.
-    	// this application can not be called a properly behaving real-time rendering application, if we are
-    	// waiting for the device to become idle every frame.
-    	device.waitIdle(); // TODO Part 3: Remove the waitIdle call and deal with the consequences!
-    	device.destroySemaphore(renderFinishedSemaphore);
-    	device.destroySemaphore(imageAvailableSemaphore);
+		// ------------------------------------------------------------------------------
+    	// Task from Part 3: Remove the waitIdle call and deal with the consequences!
+    	//  => it's gone, and has caused huge troubles.
+    	//     We have submitted endless amounts of work, because we never waited on the
+    	//     GPU to finish anything. We just submitted, and submitted, and submitted, etc.
+    	//     We have to ensure that the CPU and the GPU stay in sync w.r.t. their
+    	//     workloads.
+    	//     We have decided that we are going with CONCURRENT_FRAMES-times concurrent
+    	//     frames. So, when we produce frame number (X + CONCURRENT_FRAMES), we have
+    	//     to make sure that frame (X) has fully completed so that we can reuse
+    	//     its resources.
+		// ------------------------------------------------------------------------------
     	
 		glfwPollEvents();
     	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -181,6 +191,12 @@ int main()
     }
 
 	// ===> 14. Perform cleanup
+	device.waitIdle(); // Wait idle before destroying anything that might still be in use currently
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+		device.destroyFence(syncHostWithDeviceFence[i]);
+		device.destroySemaphore(renderFinishedSemaphores[i]);
+		device.destroySemaphore(imageAvailableSemaphores[i]);
+	}
 	for (auto it = cleanupHandlers.rbegin(); it != cleanupHandlers.rend(); ++it) {
 		(*it)();
 	}
