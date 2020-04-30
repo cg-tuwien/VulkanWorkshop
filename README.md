@@ -1,4 +1,4 @@
-# Vulkan Workshop, Part 1
+# Vulkan Workshop, Part 1 "First Steps"
 
 This branch contains the code for the initial state of the workshop's part 1.     
 Please checkout this branch in order to work on the tasks of part 1.    
