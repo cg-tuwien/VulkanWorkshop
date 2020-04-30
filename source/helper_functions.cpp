@@ -3,9 +3,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 namespace helpers
 {
-	GLFWwindow* CreateWindowWithGlfw(
+	GLFWwindow* create_window_with_glfw(
 		const int windowWidth, 
 		const int windowHeight)
 	{
@@ -14,7 +17,7 @@ namespace helpers
 		return window;
 	}
 
-	vk::Instance CreateVulkanInstance()
+	vk::Instance create_vulkan_instance_with_validation_layers()
 	{
 		static const std::vector<const char*> EnabledVkValidationLayers = {
 			"VK_LAYER_KHRONOS_validation"
@@ -32,7 +35,7 @@ namespace helpers
 		return vkInstance;
 	}
 
-	VkSurfaceKHR CreateSurface(
+	VkSurfaceKHR create_surface(
 		GLFWwindow* window, 
 		vk::Instance vulkanInstance)
 	{
@@ -43,7 +46,7 @@ namespace helpers
 		return surface;
 	}
 
-	uint32_t FindQueueFamilyIndexForParameters(
+	uint32_t find_queue_family_index_for_parameters(
 		const vk::PhysicalDevice physicalDevice,
 		const VkSurfaceKHR surfaceToBeSupported,
 		const vk::QueueFlags operationsToBeSupported)
@@ -63,7 +66,7 @@ namespace helpers
 		throw std::runtime_error("Couldn't find a suitable queue family");
 	}
 
-	vk::Device CreateLogicalDevice(
+	vk::Device create_logical_device(
 		const vk::PhysicalDevice physicalDevice,
 		const VkSurfaceKHR surfaceToBeSupported)
 	{
@@ -80,7 +83,7 @@ namespace helpers
 		float queuePriority = 1.0f;
 		auto queueCreateInfo = vk::DeviceQueueCreateInfo{}
 			.setQueueCount(1u)
-			.setQueueFamilyIndex(helpers::FindQueueFamilyIndexForParameters(
+			.setQueueFamilyIndex(helpers::find_queue_family_index_for_parameters(
 				physicalDevice, 
 				surfaceToBeSupported, 
 				vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eTransfer
@@ -99,12 +102,12 @@ namespace helpers
 		return device;
 	}
 
-	std::tuple<uint32_t, vk::Queue> GetQueueOnLogicalDevice(
+	std::tuple<uint32_t, vk::Queue> get_queue_on_logical_device(
 		const vk::PhysicalDevice physicalDevice,
 		const VkSurfaceKHR surfaceToBeSupported,
 		const vk::Device logcialDevice)
 	{
-		auto queueFamilyIndex = helpers::FindQueueFamilyIndexForParameters(
+		auto queueFamilyIndex = helpers::find_queue_family_index_for_parameters(
 			physicalDevice, 
 			surfaceToBeSupported, 
 			vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eTransfer
@@ -112,14 +115,12 @@ namespace helpers
 		return std::make_tuple(queueFamilyIndex, logcialDevice.getQueue(queueFamilyIndex, 0u));
 	}
 
-	vk::DeviceMemory AllocateHostCoherentMemoryForBuffer(
+	vk::DeviceMemory allocate_host_coherent_memory_for_given_requirements(
 		const vk::PhysicalDevice physicalDevice,
 		const vk::Device device,
 		const vk::DeviceSize bufferSize,
-		const vk::Buffer buffer)
+		const vk::MemoryRequirements memoryRequirements)
 	{
-		auto memoryRequirements = device.getBufferMemoryRequirements(buffer);
-		
 		auto memoryAllocInfo = vk::MemoryAllocateInfo{}
 			.setAllocationSize(memoryRequirements.size)
 			.setMemoryTypeIndex([&]() {
@@ -152,14 +153,14 @@ namespace helpers
 		return memory;
 	}
 
-	void Free_Memory(
+	void free_memory(
 		const vk::Device device,
 		vk::DeviceMemory memory)
 	{
 		device.freeMemory(memory);
 	}
 
-	vk::CommandBuffer AllocateCommandBuffer(
+	vk::CommandBuffer allocate_command_buffer(
 		const vk::Device device,
 		const vk::CommandPool commandPool)
 	{
@@ -169,7 +170,7 @@ namespace helpers
 		return device.allocateCommandBuffers(allocInfo)[0];
 	}
 
-	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> Load_image_into_host_coherent_Buffer(
+	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> load_image_into_host_coherent_buffer(
 		const vk::PhysicalDevice physicalDevice,
 		const vk::Device device,
 		std::string pathToImageFile)
@@ -179,26 +180,27 @@ namespace helpers
 		stbi_uc* pixels = stbi_load(pathToImageFile.c_str(), &width, &height, &channelsInFile, desiredColorChannels); 
 		size_t imageDataSize = width * height * desiredColorChannels;
 
-		// RGB -> BGR
+		// Convert RGB -> BGR
+		// TODO: Not sure if this is a good idea on all different GPUs. Probably it's not. If the image looks odd => try something else here.
 		for (int i = 0; i < imageDataSize; i += desiredColorChannels) {
 			stbi_uc tmp = pixels[i];
 			pixels[i] = pixels[i+2];
 			pixels[i+2] = tmp;
 		}
 
-		// buffer:
+		// Create a buffer:
 		auto bufferCreateInfo = vk::BufferCreateInfo{}
 			.setSize(static_cast<vk::DeviceSize>(imageDataSize))
 			.setUsage(vk::BufferUsageFlagBits::eTransferSrc);
 		auto buffer = device.createBuffer(bufferCreateInfo);
 		
-		// host-coherent memory:
-		auto memory = helpers::AllocateHostCoherentMemoryForBuffer(physicalDevice, device, 
+		// Create the memory:
+		auto memory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
 			bufferCreateInfo.size,
-			buffer
+			device.getBufferMemoryRequirements(buffer)
 		);
 		
-		// copy our data into the buffer:
+		// Copy the image's data into the buffer
 		auto clearColorMappedMemory = device.mapMemory(memory, 0, bufferCreateInfo.size);
 		memcpy(clearColorMappedMemory, pixels, bufferCreateInfo.size);
 		device.unmapMemory(memory);
@@ -208,7 +210,7 @@ namespace helpers
 		return std::make_tuple(buffer, memory, width, height);
 	}
 
-	void RecordBarrierWithImageLayoutTransition(
+	void establish_pipeline_barrier_with_image_layout_transition(
 		vk::CommandBuffer commandBuffer,
 		vk::Image image,
 		vk::PipelineStageFlags srcPipelineStage, vk::PipelineStageFlags dstPipelineStage,
@@ -233,7 +235,7 @@ namespace helpers
 		);
 	}
 
-	void RecordCopyBufferToImage(
+	void copy_buffer_to_image(
 		vk::CommandBuffer commandBuffer,
 		vk::Buffer buffer,
 		vk::Image image, uint32_t width, uint32_t height)
@@ -246,22 +248,22 @@ namespace helpers
 		});
 	}
 
-	void DestroyWindow(GLFWwindow* window)
+	void destroy_window(GLFWwindow* window)
 	{
 	    glfwDestroyWindow(window);
 	}
 	
-	void DestroyVulkanInstance(vk::Instance vulkanInstance)
+	void destroy_vulkan_instance(vk::Instance vulkanInstance)
 	{
 		vulkanInstance.destroy();
 	}
 	
-	void DestroySurface(const vk::Instance vulkanInstance, VkSurfaceKHR surface)
+	void destroy_surface(const vk::Instance vulkanInstance, VkSurfaceKHR surface)
 	{
 		vulkanInstance.destroy(surface);
 	}
 	
-	void DestroyLogicalDevice(vk::Device device)
+	void destroy_logical_device(vk::Device device)
 	{
 		device.destroy();
 	}
