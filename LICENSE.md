@@ -1,5 +1,7 @@
 # License of the workshop source code
-Applies to files under [`source`](source), [`visual_studio`](visual_studio), and [`resources/shaders`](resources/shaders)
+Applies to files under [`source`](source), [`visual_studio`](visual_studio), and [`resources/shaders`](resources/shaders):
+
+---
 
 MIT License
 
@@ -23,6 +25,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+---
+
+Some parts of the source code are copied or based on [Alexander Overvoorde's Vulkan Tutorial](https://vulkan-tutorial.com). The code is released under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. Source: [github.com/Overv/VulkanTutorial](https://github.com/Overv/VulkanTutorial).
 
 # External resources/dependencies and their licenses
 
