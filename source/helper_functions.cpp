@@ -122,7 +122,7 @@ namespace helpers
 		const vk::MemoryRequirements memoryRequirements)
 	{
 		auto memoryAllocInfo = vk::MemoryAllocateInfo{}
-			.setAllocationSize(memoryRequirements.size)
+			.setAllocationSize(bufferSize)
 			.setMemoryTypeIndex([&]() {
 					// Get memory types supported by the physical device:
 					auto memoryProperties = physicalDevice.getMemoryProperties();
