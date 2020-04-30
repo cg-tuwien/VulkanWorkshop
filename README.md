@@ -28,6 +28,7 @@ If you would like to set-up the project for a different environment than the pre
 * Link the library GLFW (see [`external/glfw`](external/glfw))
 * Provide the following include directories:
   * GLFW include ([`external/glfw/include`](external/glfw/include))
+  * GLM include ([`external/glm`](external/glm)
   * STB image ([`external/stb`](external/stb))
   * tiny obj loader ([`external/tinyobj`](external/tinyobj))
   * Vulkan SDK's include directory (you'll probably want to use the `VULKAN_SDK` environment variable with `/Include` appended)
@@ -48,6 +49,7 @@ The individual workshop units are listed below. Each unit's initial code version
 
 **External resources/dependencies and their licenses**
 * GLFW (zlib/libpng license) [`external/glfw`](external/glfw)
+* GLM (The Happy Bunny License or MIT License) ([`external/glm`](external/glm)
 * stb_image (MIT license or Public Domain) [`external/stb`](external/stb)
 * tiny obj loader (MIT license) [`external/tinyobj`](external/tinyobj)
 * [Free VFX Image Sequences & Flipbooks](https://blogs.unity3d.com/pt/2016/11/28/free-vfx-image-sequences-flipbooks) by Thomas ICHÉ (CC0 license) [`resources/images`](resources/images)
