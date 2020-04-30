@@ -11,9 +11,10 @@ The branch of part 3 will contain the solutions.
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
-* TBD
+* Prepare command buffers and re-use them later
+* Use given images to implement a sprite animation
 
 **Navigation**
 * Back to [master](https://github.com/cg-tuwien/VulkanWorkshop)
 * Previous part: [Part 1](https://github.com/cg-tuwien/VulkanWorkshop/tree/part1)
-* Next part: Part 3 TBD
+* Next part: [Part 3](https://github.com/cg-tuwien/VulkanWorkshop/tree/part3)
