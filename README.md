@@ -44,12 +44,3 @@ In short, the code will try to load images from relative paths `images/*`, and s
 
 The individual workshop units are listed below. Each unit's initial code version is available on a separate branch. The idea is that you switch to the branch of a unit, check it out, and start working on its tasks.
 * Unit 01: First Steps ([Branch `unit_01`](https://github.com/cg-tuwien/VulkanWorkshop/tree/unit_01))
-
----
-
-**External resources/dependencies and their licenses**
-* GLFW (zlib/libpng license) [`external/glfw`](external/glfw)
-* GLM (The Happy Bunny License or MIT License) ([`external/glm`](external/glm)
-* stb_image (MIT license or Public Domain) [`external/stb`](external/stb)
-* tiny obj loader (MIT license) [`external/tinyobj`](external/tinyobj)
-* [Free VFX Image Sequences & Flipbooks](https://blogs.unity3d.com/pt/2016/11/28/free-vfx-image-sequences-flipbooks) by Thomas ICHÉ (CC0 license) [`resources/images`](resources/images)
