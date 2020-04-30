@@ -54,6 +54,13 @@ namespace helpers
 		const vk::Device device,
 		const vk::CommandPool commandPool
 	);
+
+	// Free command buffers that have been created with one of the helper functions
+	void free_command_buffer(
+		const vk::Device device,
+		const vk::CommandPool commandPool,
+		vk::CommandBuffer commandBuffer
+	);
 	
 	// Allocate "host coherent" memory, which is accessible from both, the CPU-side (host) and the GPU-side (device).
 	// !! Host coherent memory will automatically be made available on the the device on queue-submits !!
@@ -76,6 +83,12 @@ namespace helpers
 	void free_memory(
 		const vk::Device device,
 		vk::DeviceMemory memory
+	);
+
+	// Destroy buffers that have been created with one of the helper functions
+	void destroy_buffer(
+		const vk::Device device,
+		vk::Buffer buffer
 	);
 
 	// Records a pipeline barrier INCLUDING an image layout transition into the given command buffer.
