@@ -114,12 +114,26 @@ int main()
 	auto commandPoolCreateInfo = vk::CommandPoolCreateInfo{}
 		.setQueueFamilyIndex(queueFamilyIndex);
 	auto commandPool = device.createCommandPool(commandPoolCreateInfo);
-	
+
+	// Showing only a single color is -- for most of us probably -- a bit boring. Let's make something more fancy, shall we?
+	// TODO Part 2: Load 100 images from file, which contain a sprite-animation of an explosion!
+	//              The images can be loaded from: "images/explostion02HD-frame001.tga".."images/explostion02HD-frame100.tga"
+	//              Feel free to use helpers::load_image_into_host_coherent_buffer
+
+	// With these images loaded, we would like to copy them into the swapchain image.. just as we have done with the clear colors in Part 1.
+	// HOWEVER, in order to achieve that, let's not create a new command buffer every frame, but instead, let's do something more Vulkan-esque:
+	// TODO Part 2: Prepare a REUSABLE command buffer for every single one of the explosion-images to copy it into a given swap chain image!
+	//              "Reusable" means: We create it once, let it live until the application's end, and use it whenever required.
+	//              Attention: do not use vk::CommandBufferUsageFlagBits::eOneTimeSubmit for such command buffers, leave the flag away!
+
 	// ===> 11. Start our render loop and clear those swap chain images!!
 	const double startTime = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
     	auto curTime = glfwGetTime();
-		
+    	// TODO Part 2: Implement the sprite-animation by copying the correct image at the correct time into the correct swap chain image!
+    	//              You will have to implement some timing logic to present the right image at the right time.
+    	//              The sprite animation is probably intended for a 60Hz timing, but other Hz will most likely also look good.
+    	
     	// Create a semaphore that will be signalled as soon as an image becomes available:
 		auto imageAvailableSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
     	// Request the next image (we'll get the index returned, we already have gotten the image handles in ===> 8.):
@@ -162,6 +176,7 @@ int main()
 		// Task from Part 1: Can we wait in a specific/later stage?
     	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eTransfer; 
 		// ------------------------------------------------------------------------------
+    	// TODO Part 2: Submit the command buffer that you have selected!
     	auto submitInfo = vk::SubmitInfo{}
     		.setCommandBufferCount(1u)
     		.setPCommandBuffers(&commandBuffer)
@@ -192,7 +207,7 @@ int main()
     	}
     }
 
-    // Perform cleanup:
+	// ===> 12. Perform cleanup
 	for (auto it = cleanupHandlers.rbegin(); it != cleanupHandlers.rend(); ++it) {
 		(*it)();
 	}
