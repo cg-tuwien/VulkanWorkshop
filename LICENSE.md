@@ -27,7 +27,7 @@ SOFTWARE.
 
 ---
 
-Some parts of the source code are copied or based on [Alexander Overvoorde's Vulkan Tutorial](https://vulkan-tutorial.com). The code is released under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. Source: [github.com/Overv/VulkanTutorial](https://github.com/Overv/VulkanTutorial).
+Some parts of the source code are copied from or based on [Alexander Overvoorde's Vulkan Tutorial](https://vulkan-tutorial.com). The code is released under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. Source: [github.com/Overv/VulkanTutorial](https://github.com/Overv/VulkanTutorial).
 
 # Resources, external dependencies, and their licenses
 
