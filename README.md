@@ -12,7 +12,7 @@ The branch of part 6 will contain the solutions.
 
 **Tasks**
 * Watch out for **`// TODO Part 5` comments** in code! All tasks are described using these.
-* Fix the stuttering animation by properly handling resources for concurrent frames once again
+* Fix real/potential animation stuttering by properly handling resources for concurrent frames once again
 * Create a texture in device memory that can be sampled in shaders
 * Create a "combined image sampler"-type descriptor for the texture
 
