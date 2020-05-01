@@ -4,7 +4,7 @@ This branch contains the code for the initial state of the workshop's part 6.
 Please checkout this branch in order to work on the tasks of part 6.    
 
 This is the final part of this workshop. If you have made it this far: **Congratulations!**    
-There are no solutions to the tasks of this part. They will be provided at an indeterminate time in the distant future.
+There are no solutions to the tasks of this part yet. They will be provided at an indeterminate time in the distant future.
 
 **Preparations** 
 * Make sure to have read the `README.md` file in the [`master`](https://github.com/cg-tuwien/VulkanWorkshop) branch
