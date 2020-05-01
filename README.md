@@ -10,7 +10,8 @@ The branch of part 3 will contain the solutions.
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
-* TBD
+* Stop using waitIdle and handle concurrent rendering of multiple frames
+* Do not create semaphores every frame, but create them only once and reuse them
 
 **Navigation**
 * Back to [master](https://github.com/cg-tuwien/VulkanWorkshop)
