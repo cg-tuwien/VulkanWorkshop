@@ -87,11 +87,6 @@ int main()
 
 			helpers::copy_buffer_to_image(commandBuffer, std::get<vk::Buffer>(explosionImages[ei]), swapchainImages[si], 800, 800);
 
-			// ------------------------------------------------------------------------------
-			// We have been able to remove the second image layout transition and handle both,
-			// dependencies AND the image layout transition using the renderpass!
-			// ------------------------------------------------------------------------------
-
 			commandBuffer.end();
 			preparedCommandBuffers[si][ei] = commandBuffer;
 
@@ -170,23 +165,17 @@ int main()
 		// Describe the color attachment:
 		vk::AttachmentDescription{}
 			.setFormat(selectedFormatAndColorSpace.format).setSamples(vk::SampleCountFlagBits::e1)
-			// ------------------------------------------------------------------------------
-			// Task from Part 4: Set up 1) proper load and store operations, and 2) proper initial and final layouts for the color attachment:
 			.setLoadOp(vk::AttachmentLoadOp::eLoad)			// What do do with the image when the renderpass starts? => We have already stored something in the image => preserve a.k.a. load this data!
 			.setStoreOp(vk::AttachmentStoreOp::eStore)		// What to do with the image when the renderpass has finished? => We want the final image be stored, so that it can be presented
 			.setInitialLayout(vk::ImageLayout::eTransferDstOptimal)	// When the renderpass starts, in which layout will the image be? => We removed image layout transition after helpers::copy_buffer_to_image, we can handle it here!
 			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR),	// When the renderpass finishes, in which layout shall the image be transfered? => The image shall be presented directly afterwards. 
-			// ------------------------------------------------------------------------------
 		// Describe the depth attachment:
 		vk::AttachmentDescription{}
 			.setFormat(vk::Format::eD32Sfloat).setSamples(vk::SampleCountFlagBits::e1)
-			// ------------------------------------------------------------------------------
-			// Task from Part 4: Set up 1) proper load and store operations, and 2) proper initial and final layouts for the depth attachment:
 			.setLoadOp(vk::AttachmentLoadOp::eClear)		// What do do with the image when the renderpass starts? => Make sure that we have cleared the content of previous frames!
 			.setStoreOp(vk::AttachmentStoreOp::eDontCare)	// What to do with the image when the renderpass has finished? => We don't need the depth buffer for anything afterwards.
 			.setInitialLayout(vk::ImageLayout::eUndefined)	// When the renderpass starts, in which layout will the image be?
 			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),	// When the renderpass finishes, in which layout shall the image be transferred? => It will be in eDepthStencilAttachmentOptimal layout anyways.
-			// ------------------------------------------------------------------------------
 	};
 
 	// ad 2) Describe per subpass for each attachment how it is going to be used, and into which layout it shall be transferred
@@ -203,19 +192,17 @@ int main()
 	//        this renderpass, and another with whatever comes after this renderpass in a queue.
 	std::array<vk::SubpassDependency, 2> subpassDependencies{
 		vk::SubpassDependency{}
-			// ------------------------------------------------------------------------------
-			// Task from Part 4: Establish proper dependencies with whatever comes before (which is the imageAvailableSemaphore wait and then the command buffer that copies an explosion image to the swapchain image)
+			// Establish proper dependencies with whatever comes before (which is the imageAvailableSemaphore wait and then the command buffer that copies an explosion image to the swapchain image):
 			                    .setSrcSubpass(VK_SUBPASS_EXTERNAL) /* -> */ .setDstSubpass(0u)
 			//     We have to wait for the transfer of helpers::copy_buffer_to_image to complete before we may render into the image.
 			//     We do not need to wait before the eColorAttachmentOutput stage, because only then we are going to write into the image.
 			 .setSrcStageMask(vk::PipelineStageFlagBits::eTransfer) /* -> */ .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
 			//     The memory written helpers::copy_buffer_to_image is a eTransferWrite => make this memory available.
 			//     This memory must be visible to whatever cache/unit/ROP performs eColorAttachmentWrite. We are not going to read from it, therefore eColorAttachmentWrite is the only neccessary access type to include.
-			  .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite) /* -> */ .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite),
-			// ------------------------------------------------------------------------------
+			  .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite) /* -> */ .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
+		,
 		vk::SubpassDependency{}
-			// ------------------------------------------------------------------------------
-			// Task from Part 4: Establish proper dependencies with whatever comes after (which is the renderFinishedSemaphore signal) 
+			// Establish proper dependencies with whatever comes after (which is the renderFinishedSemaphore signal):
 			                                                 .setSrcSubpass(0u) /* -> */ .setDstSubpass(VK_SUBPASS_EXTERNAL)
 			//     Execution may continue as soon as the eColorAttachmentOutput stage is done.
 			//     However, nothing must really wait on that stage, because afterwards comes the semaphore. Hence, eBottomOfPipe.
@@ -223,7 +210,6 @@ int main()
 			//     The graphics pipeline is performing eColorAttachmentWrites. These need to be made available.
 			//     We don't have to make them visible to anything, because the semaphore performs a full memory barrier anyways. 
 			       .setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite) /* -> */ .setDstAccessMask(vk::AccessFlags{})
-			// ------------------------------------------------------------------------------
 	};
 
 	auto renderpassCreateInfo = vk::RenderPassCreateInfo{}
@@ -294,18 +280,18 @@ int main()
 
 	// NOT SO FAST MY FRIEND... we have to take a little detour and create some GPU resources and DESCRIPTORS which we can pass to shaders
 	// ===> 19. Create resource descriptors on the GPU
-	// First, let's create a buffer that we are going to use as uniform buffer and pass to shaders
-	auto [uniformBuffer, uniformBufferMemory] = helpers::create_host_coherent_buffer_and_memory(
-		device, physicalDevice, 
-		sizeof(std::array<glm::mat4, 3>), 
-		vk::BufferUsageFlagBits::eUniformBuffer
-	);
-	// Oh oh, we've got a small (or big) problem with our uniformBuffer: If you look closely (it is probably better visible if you 
-	// slow down the animation a bit), you can see the 3D model's animation stuttering (moving back and forth a bit). This is because
-	// we are only using ONE uniformBuffer that contains the transformation matrices, but #CONCURRENT_FRAMES concurrent frames which
-	// are all competing against each other and writing into the SAME uniformBuffer... concurrently!
-	// TODO Part 5: Make a separate uniformBuffer for every concurrent frame and fix the animation stuttering this way!
-	//              In order to bind the different uniform buffers to the shaders, you will also need multiple descriptors!
+	// First, let's create uniform buffers to be used concurrently and in shaders:
+	// ------------------------------------------------------------------------------
+	// Task from Part 5: Make a separate uniformBuffer for every concurrent frame and fix the animation stuttering this way!
+	std::array<std::tuple<vk::Buffer, vk::DeviceMemory>, CONCURRENT_FRAMES> ubos;
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+		ubos[i] = helpers::create_host_coherent_buffer_and_memory(
+			device, physicalDevice, 
+			sizeof(std::array<glm::mat4, 3>), 
+			vk::BufferUsageFlagBits::eUniformBuffer
+		);
+	}
+
 
 	// In order to make it available to shaders, we have to create a DESCRIPTOR for it.
 	// However, in order to create a descriptor, we have to create a DESCRIPTOR POOL first:
@@ -334,26 +320,31 @@ int main()
 	);
 
 	// Okay... we've got the descriptor set LAYOUT. Now, let's create ACTUAL DESCRIPTOR SETS (containing actual resource descriptors):
+	std::array<vk::DescriptorSetLayout, CONCURRENT_FRAMES> sameLayouts;
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) { sameLayouts[i] = descriptorSetLayout; }
 	auto descriptorSets = device.allocateDescriptorSets(
 		vk::DescriptorSetAllocateInfo{}
 			.setDescriptorPool(descriptorPool)
-			.setDescriptorSetCount(1u)
-			.setPSetLayouts(&descriptorSetLayout)
+			.setDescriptorSetCount(CONCURRENT_FRAMES)
+			.setPSetLayouts(sameLayouts.data())
 	);
-	assert (1 == descriptorSets.size()); // We have requested ONE descriptor set => have we gotten ONE?
+	assert (CONCURRENT_FRAMES == descriptorSets.size()); // We have requested #CONCURRENT_FRAMES descriptor set => have we gotten #CONCURRENT_FRAMES?
 
 	// The descriptor set(s) are allocated, but they contain no data so far
 	//  => let's fill them with some useful data, a.k.a. WRITE into the DESCRIPTORS
-	auto uniformBufferInfo = vk::DescriptorBufferInfo{}.setBuffer(uniformBuffer).setOffset(0).setRange(sizeof(std::array<glm::mat4, 3>));
-	std::array<vk::WriteDescriptorSet, 1> writes{
-		vk::WriteDescriptorSet{}
-			.setDstSet(descriptorSets[0])
-			.setDstBinding(0u)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(1u).setPBufferInfo(&uniformBufferInfo)
-	};
-	// And perform the actual write:
-	device.updateDescriptorSets(static_cast<uint32_t>(writes.size()), writes.data(), 0u, nullptr);
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+		auto uniformBufferInfo = vk::DescriptorBufferInfo{}.setBuffer(std::get<vk::Buffer>(ubos[i])).setOffset(0).setRange(sizeof(std::array<glm::mat4, 3>));
+		std::array<vk::WriteDescriptorSet, 1> writes{
+			vk::WriteDescriptorSet{}
+				.setDstSet(descriptorSets[i])
+				.setDstBinding(0u)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(1u).setPBufferInfo(&uniformBufferInfo)
+		};
+		// And perform the actual write:
+		device.updateDescriptorSets(static_cast<uint32_t>(writes.size()), writes.data(), 0u, nullptr);
+	}
+	// ------------------------------------------------------------------------------
 	// It's done. Descriptors are written to the GPU. We can use them now in shaders.
 
 	// After a thousand years... 
@@ -391,10 +382,8 @@ int main()
 		auto commandBuffer = helpers::allocate_command_buffer(device, commandPool);
     	commandBuffer.begin(vk::CommandBufferBeginInfo{});
 
-		// ------------------------------------------------------------------------------
-		// Task from Part 4: Record rendering of the 3D model into commandBuffer using graphicsPipeline
-		// 
-		 std::array<vk::ClearValue, 2> clearValues {
+		// Record rendering of the 3D model into commandBuffer using graphicsPipeline
+		std::array<vk::ClearValue, 2> clearValues {
 			vk::ClearValue{ vk::ClearColorValue{ std::array<float, 4>{1.0f, 0.0f, 0.5f, 1.0f} } },
 			vk::ClearValue{ vk::ClearDepthStencilValue{ 1.0f, 0u }}
 		};
@@ -409,7 +398,7 @@ int main()
 
 		commandBuffer.bindDescriptorSets(
 			vk::PipelineBindPoint::eGraphics, pipelineLayout, 
-			0u, 1u, &descriptorSets[0], // <--- Bind the actual descriptors to the pipeline
+			0u, 1u, &descriptorSets[i], // <--- Bind the actual descriptors to the pipeline
 			0u, nullptr
 		);
 
@@ -417,7 +406,6 @@ int main()
 		commandBuffer.draw(numberOfVertices, 1u, 0u, 0u);
 		
 		commandBuffer.endRenderPass();
-		// ------------------------------------------------------------------------------
 
 		commandBuffer.end();
 		graphicsDrawCommandBuffers[i] = commandBuffer;
@@ -439,7 +427,8 @@ int main()
     	auto curTime = glfwGetTime();
     	static auto lastAniTime = startTime;
     	static auto explosionAniIndex = size_t{0};
-    	if (curTime - lastAniTime > 0.033333) {
+    	const auto animationHz = double{0.033333};
+    	if (curTime - lastAniTime > animationHz) {
     		explosionAniIndex = (explosionAniIndex + 1) % 100;
     		lastAniTime = curTime;
     	}
@@ -454,12 +443,12 @@ int main()
 
     	// Before submitting work to the queue, update data in our host coherent buffer(s):
     	auto easingFunction = [](float n) { n = 1.0f - n; return 1.0f - n*n; };
-    	float modelTranslationZ = glm::mix(-5.0f, 10.0f, easingFunction(static_cast<float>(explosionAniIndex) / 100.0f));
+    	float modelTranslationZ = glm::mix(-5.0f, 10.0f, easingFunction(static_cast<float>(explosionAniIndex) / 100.0f + (curTime - lastAniTime) / (100.0f * animationHz)));
     	auto model = glm::translate(glm::mat4{1.0f}, glm::vec3{0.0f, 0.0f, modelTranslationZ}) * glm::translate(glm::mat4{1.0f}, glm::vec3{2.0f, -2.5f, 0.0f}) * glm::rotate(glm::mat4{1.0f}, glm::radians(0.f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::mat4{1.0f}, glm::vec3{0.002f});
         auto view =  glm::inverse(glm::mat4{glm::vec4{1,0,0,0}, glm::vec4{0,-1,0,0}, glm::vec4{0,0,1,0}, glm::vec4{0,0,10,1}});
         auto proj = glm::perspective(glm::radians(90.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 20.0f);
 		std::array<glm::mat4, 3> matrices{ model, view, proj };
-		helpers::copy_data_into_host_coherent_memory(device, sizeof(matrices), matrices.data(), uniformBufferMemory);
+		helpers::copy_data_into_host_coherent_memory(device, sizeof(matrices), matrices.data(), std::get<vk::DeviceMemory>(ubos[frameInFlightIndex]));
     	
     	// Request the next image (we'll get the index returned, we already have gotten the image handles in ===> 8.):
 		auto swapChainImageIndex = device.acquireNextImageKHR(swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[frameInFlightIndex], nullptr).value;
@@ -515,8 +504,10 @@ int main()
 	device.destroyPipeline(graphicsPipeline);
 	device.destroyPipelineLayout(pipelineLayout);
 	device.destroyDescriptorSetLayout(descriptorSetLayout);
-	helpers::free_memory(device, uniformBufferMemory);
-	helpers::destroy_buffer(device, uniformBuffer);
+	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+		helpers::destroy_buffer(device, std::get<vk::Buffer>(ubos[i]));
+		helpers::free_memory(device, std::get<vk::DeviceMemory>(ubos[i]));
+	}
 	device.destroyRenderPass(renderpass);
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) { device.destroyFramebuffer(framebuffers[i]); }
 	helpers::destroy_image_view(device, depthImageView);
