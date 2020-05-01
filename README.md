@@ -18,4 +18,4 @@ The branch of part 5 will contain the solutions.
 **Navigation**
 * Back to [master](https://github.com/cg-tuwien/VulkanWorkshop)
 * Previous part: [Part 3](https://github.com/cg-tuwien/VulkanWorkshop/tree/part3)
-* Next part: Part 5 TBD
+* Next part: [Part 5](https://github.com/cg-tuwien/VulkanWorkshop/tree/part5)
