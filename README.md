@@ -8,7 +8,7 @@ The branch of part 6 will contain the solutions.
 * Make sure to have read the `README.md` file in the [`master`](https://github.com/cg-tuwien/VulkanWorkshop) branch
 * It is highly recommended to watch the [Introduction to Vulkan](https://youtu.be/ZWV6zvKe9Hc) lecture 
 * Read further documentation and instructions directly in the source code
-* You'll find a lot of helpful information in the [Vulkan specification](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html), especially relevant for this part: [7.4. Render Pass Commands](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#renderpass-commands)
+* You'll find a lot of helpful information in the [Vulkan specification](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html), especially relevant for this part: [13. Resource Descriptors](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets)
 
 **Tasks**
 * Fix the stuttering animation by properly handling resources for concurrent frames once again
