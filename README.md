@@ -10,6 +10,7 @@ The branch of part 3 will contain the solutions.
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
+* Watch out for **`// TODO Part 3` comments** in code! All tasks are described using these.
 * Stop using waitIdle and handle concurrent rendering of multiple frames
 * Do not create semaphores every frame, but create them only once and reuse them
 
