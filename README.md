@@ -65,7 +65,7 @@ For more information, please refer to [KhronosGroup/Vulkan-Hpp](https://github.c
 *Note:* The [Vulkan specification](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html) is referring to the C API naming always. I.e. whenever you look something up in the specification, make sure to translate into C naming style!
 
 **Shaders**     
-There are two shader files included in this workshop. In later parts (Part 5 and Part 6) they have to be modified as well. You can find them under [`resources/shaders`](resources/shaders). 
+There are two shader files included in this workshop. In later parts ([Part 5](https://github.com/cg-tuwien/VulkanWorkshop/tree/part5) and [Part 6](https://github.com/cg-tuwien/VulkanWorkshop/tree/part6)) they have to be modified as well. You can find them under [`resources/shaders`](resources/shaders). 
 
 If you are using the preconfigured Visual Studio solution, just edit them in place and when you are done editing, simply build the solution in Visual Studio. The configured custom build step will compile the shaders and deploy them to the target directory (if they compiled successfully). If there was an compilation error, take a look at Visual Studio's `Output` view, the error messages should be displayed there.
 
