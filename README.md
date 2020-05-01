@@ -11,6 +11,7 @@ The branch of part 5 will contain the solutions.
 * You'll find a lot of helpful information in the [Vulkan specification](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html), especially relevant for this part: [7.4. Render Pass Commands](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#renderpass-commands)
 
 **Tasks**
+* Watch out for **`// TODO Part 4` comments** in code! All tasks are described using these.
 * Configure proper load and store operations, and layouts for framebuffer attachments in a renderpass
 * Configure proper synchronization dependencies for a renderpass
 * Use graphics pipeline and renderpass to draw a 3D model
