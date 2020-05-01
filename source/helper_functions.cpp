@@ -37,7 +37,7 @@ namespace helpers
 
 	VkSurfaceKHR create_surface(
 		GLFWwindow* window, 
-		vk::Instance vulkanInstance)
+		const vk::Instance vulkanInstance)
 	{
 		VkSurfaceKHR surface;
 		if (VK_SUCCESS != glfwCreateWindowSurface(vulkanInstance, window, nullptr, &surface)) {
@@ -188,7 +188,7 @@ namespace helpers
 	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> load_image_into_host_coherent_buffer(
 		const vk::PhysicalDevice physicalDevice,
 		const vk::Device device,
-		std::string pathToImageFile)
+		const std::string pathToImageFile)
 	{
 		const int desiredColorChannels = STBI_rgb_alpha;	
 		int width, height, channelsInFile;
@@ -228,11 +228,11 @@ namespace helpers
 	}
 
 	void establish_pipeline_barrier_with_image_layout_transition(
-		vk::CommandBuffer commandBuffer,
-		vk::PipelineStageFlags srcPipelineStage, vk::PipelineStageFlags dstPipelineStage,
-		vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
-		vk::Image image,
-		vk::ImageLayout oldLayout, vk::ImageLayout newLayout
+		const vk::CommandBuffer commandBuffer,
+		const vk::PipelineStageFlags srcPipelineStage, const vk::PipelineStageFlags dstPipelineStage,
+		const vk::AccessFlags srcAccessMask, const vk::AccessFlags dstAccessMask,
+		const vk::Image image,
+		const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout
 	)
 	{
 		auto imageMemoryBarrier = vk::ImageMemoryBarrier{};
@@ -254,9 +254,9 @@ namespace helpers
 	}
 
 	void copy_buffer_to_image(
-		vk::CommandBuffer commandBuffer,
-		vk::Buffer buffer,
-		vk::Image image, uint32_t width, uint32_t height)
+		const vk::CommandBuffer commandBuffer,
+		const vk::Buffer buffer,
+		const vk::Image image, const uint32_t width, const uint32_t height)
 	{
 		commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, { 
 			vk::BufferImageCopy{
@@ -286,11 +286,11 @@ namespace helpers
 		device.destroy();
 	}
 
-	std::tuple<vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_of_obj(
+	std::tuple<size_t, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_of_obj(
 		const std::string modelPath,
 		const vk::Device device,
 		const vk::PhysicalDevice physicalDevice,
-		std::string submeshNamesToExclude)
+		const std::string submeshNamesToExclude)
 	{
 		// This code is borrowed from Alexander Overvoorde's Vulkan Tutorial, but has been modified:
 		
@@ -365,7 +365,164 @@ namespace helpers
 		device.unmapMemory(texcoMemory);
 
 		// Done => return:
-		return std::make_tuple(posBuffer, posMemory, texcoBuffer, texcoMemory);
+		return std::make_tuple(positions.size(), posBuffer, posMemory, texcoBuffer, texcoMemory);
 	}
 
+	std::tuple<vk::Image, vk::DeviceMemory> create_image(
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const uint32_t width, const uint32_t height, const vk::Format format, const vk::ImageUsageFlags usageFlags)
+	{
+		auto createInfo = vk::ImageCreateInfo{}
+			.setImageType(vk::ImageType::e2D)
+			.setExtent({width, height, 1u})
+			.setMipLevels(1u)
+			.setArrayLayers(1u)
+			.setFormat(format)
+			.setTiling(vk::ImageTiling::eOptimal)			// We just create all images in optimal tiling layout
+			.setInitialLayout(vk::ImageLayout::eUndefined)	// Initially, the layout is undefined
+			.setUsage(usageFlags)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setSharingMode(vk::SharingMode::eExclusive);
+		auto image = device.createImage(createInfo);
+
+		auto memoryRequirements = device.getImageMemoryRequirements(image);
+
+		auto memoryAllocInfo = vk::MemoryAllocateInfo{}
+			.setAllocationSize(memoryRequirements.size)
+			.setMemoryTypeIndex([&]() {
+					// Get memory types supported by the physical device:
+					auto memoryProperties = physicalDevice.getMemoryProperties();
+			
+					// In search for a suitable memory type INDEX:
+					for (uint32_t i = 0u; i < memoryProperties.memoryTypeCount; ++i) {
+						
+						// Is this kind of memory suitable for our buffer?
+						const auto bitmask = memoryRequirements.memoryTypeBits;
+						const auto bit = 1 << i;
+						if (0 == (bitmask & bit)) {
+							continue; // => nope
+						}
+						
+						// Does this kind of memory support our usage requirements?
+						if ((memoryProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal) // In contrast to our host-coherent buffers, we just assume that we want all our images to live in device memory
+								!= vk::MemoryPropertyFlags{}) {
+							// Return the INDEX of a suitable memory type
+							return i;
+						}
+					}
+					throw std::runtime_error("Couldn't find suitable memory.");
+				}());
+
+		auto memory = device.allocateMemory(memoryAllocInfo);
+
+		device.bindImageMemory(image, memory, 0);
+
+		return std::make_tuple(image, memory);
+	}
+
+	void destroy_image(
+		const vk::Device device,
+		vk::Image image)
+	{
+		device.destroyImage(image);
+	}
+
+	vk::ImageView create_image_view(
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const vk::Image image, const vk::Format format, const vk::ImageAspectFlags imageAspectFlags)
+	{
+		auto createInfo = vk::ImageViewCreateInfo{}
+			.setImage(image)
+			.setViewType(vk::ImageViewType::e2D)
+			.setFormat(format)
+			.setSubresourceRange({imageAspectFlags, 0u, 1u, 0u, 1u});
+
+		auto imageView = device.createImageView(createInfo);
+
+		return imageView;
+	}
+
+	void destroy_image_view(
+		const vk::Device device,
+		vk::ImageView imageView)
+	{
+		device.destroyImageView(imageView);
+	}
+
+	std::tuple<vk::ShaderModule, vk::PipelineShaderStageCreateInfo> load_shader_and_create_shader_module_and_stage_info(
+		const vk::Device device,
+		const std::string path,
+		const vk::ShaderStageFlagBits shaderStage)
+	{
+		// This code is borrowed from Alexander Overvoorde's Vulkan Tutorial, it has been modified slightly:
+		
+		std::ifstream file(path, std::ios::ate | std::ios::binary);
+
+        if (!file.is_open()) {
+            throw std::runtime_error("failed to open file!");
+        }
+
+        size_t fileSize = (size_t) file.tellg();
+        std::vector<char> buffer(fileSize);
+
+        file.seekg(0);
+        file.read(buffer.data(), fileSize);
+
+        file.close();
+
+        auto moduleCreateInfo = vk::ShaderModuleCreateInfo{}
+			.setCodeSize(buffer.size())
+			.setPCode(reinterpret_cast<const uint32_t*>(buffer.data()));
+
+        auto shaderModule = device.createShaderModule(moduleCreateInfo);
+
+		auto shaderStageCreateInfo = vk::PipelineShaderStageCreateInfo{}
+			.setStage(shaderStage)
+			.setModule(shaderModule)
+			.setPName("main"); // entry point
+		
+        return std::make_tuple(shaderModule, shaderStageCreateInfo);
+	}
+
+	void destroy_shader_module(
+		const vk::Device device,
+		vk::ShaderModule shaderModule)
+	{
+		device.destroyShaderModule(shaderModule);
+	}
+
+	std::tuple<vk::Buffer, vk::DeviceMemory> create_host_coherent_buffer_and_memory(
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const size_t bufferSize, 
+		const vk::BufferUsageFlags bufferUsageFlags)
+	{
+		// Describe a new buffer:
+		auto createInfo = vk::BufferCreateInfo{}
+			.setSize(static_cast<vk::DeviceSize>(bufferSize))
+			.setUsage(bufferUsageFlags);
+		auto buffer = device.createBuffer(createInfo);
+
+		// Allocate the memory (we want host-coherent memory):
+		auto memory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, createInfo.size, device.getBufferMemoryRequirements(buffer));
+
+		// Bind the buffer handle to the memory:
+		device.bindBufferMemory(buffer, memory, 0); 
+
+		return std::make_tuple(buffer, memory);
+	}
+
+	void copy_data_into_host_coherent_memory(
+		const vk::Device device,
+		const size_t dataSize,
+		const void* data, 
+		vk::DeviceMemory memory)
+	{
+		auto clearColorMappedMemory = device.mapMemory(memory, 0, dataSize);
+		memcpy(clearColorMappedMemory, data, dataSize);
+		device.unmapMemory(memory);
+	}
+	
 }
