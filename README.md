@@ -70,3 +70,4 @@ The individual workshop units are listed below. Each unit's initial code version
 * [Part 1: First Steps](https://github.com/cg-tuwien/VulkanWorkshop/tree/part1)
 * [Part 2: Reusable Command Buffers](https://github.com/cg-tuwien/VulkanWorkshop/tree/part2)
 * [Part 3: Concurrent Frames](https://github.com/cg-tuwien/VulkanWorkshop/tree/part3)
+* [Part 4: Renderpass and Graphics Pipeline](https://github.com/cg-tuwien/VulkanWorkshop/tree/part4)
