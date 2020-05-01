@@ -86,13 +86,12 @@ int main()
 			);
 
 			helpers::copy_buffer_to_image(commandBuffer, std::get<vk::Buffer>(explosionImages[ei]), swapchainImages[si], 800, 800);
-			
-			helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, 
-				                       vk::PipelineStageFlagBits::eTransfer, /* src -> dst */ vk::PipelineStageFlagBits::eBottomOfPipe,
-				                         vk::AccessFlagBits::eTransferWrite, /* src -> dst */ vk::AccessFlags{},
-				swapchainImages[si],   vk::ImageLayout::eTransferDstOptimal, /* old -> new */ vk::ImageLayout::ePresentSrcKHR
-			);
-			
+
+			// ------------------------------------------------------------------------------
+			// We have been able to remove the second image layout transition and handle both,
+			// dependencies AND the image layout transition using the renderpass!
+			// ------------------------------------------------------------------------------
+
 			commandBuffer.end();
 			preparedCommandBuffers[si][ei] = commandBuffer;
 
@@ -117,6 +116,12 @@ int main()
 	// Combine in an array for later use when issuing the draw call:
 	std::array<vk::Buffer, 2> vertexBuffers{ vertexBufferPositions, vertexBufferTexCoords }; 
 	std::array<vk::DeviceSize, 2> vertexBufferOffsets{ 0, 0 };
+
+	auto [textureBuffer, textureMemory, textureWidth, textureHeight] = helpers::load_image_into_host_coherent_buffer(physicalDevice, device, "models/p_pod_diffuse.jpg");
+	// Wouldn't it be super-nice if the space ship was rendered with textures?
+	// TODO Part 5: Load the 3D model's texture into a vk::Image that can be used as sampled image in shaders!
+	//              The texture has been loaded from file already, but so far, its data is only in a host coherent buffer.
+	//              Transfer it into an image that is "living" in DEVICE-MEMORY!
 	
 	// ===> 14. Create an image to be used as depth attachment
 	auto [depthImage, depthImageMemory] = helpers::create_image(
@@ -165,19 +170,23 @@ int main()
 		// Describe the color attachment:
 		vk::AttachmentDescription{}
 			.setFormat(selectedFormatAndColorSpace.format).setSamples(vk::SampleCountFlagBits::e1)
-			// TODO Part 4: Set up 1) proper load and store operations, and 2) proper initial and final layouts for the color attachment:
-			.setLoadOp(vk::AttachmentLoadOp::eDontCare)		// What do do with the image when the renderpass starts?
-			.setStoreOp(vk::AttachmentStoreOp::eDontCare)	// What to do with the image when the renderpass has finished?
-			.setInitialLayout(vk::ImageLayout::eUndefined)	// When the renderpass starts, in which layout will the image be?
-			.setFinalLayout(vk::ImageLayout::eUndefined),	// When the renderpass finishes, in which layout shall the image be transfered?
+			// ------------------------------------------------------------------------------
+			// Task from Part 4: Set up 1) proper load and store operations, and 2) proper initial and final layouts for the color attachment:
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)			// What do do with the image when the renderpass starts? => We have already stored something in the image => preserve a.k.a. load this data!
+			.setStoreOp(vk::AttachmentStoreOp::eStore)		// What to do with the image when the renderpass has finished? => We want the final image be stored, so that it can be presented
+			.setInitialLayout(vk::ImageLayout::eTransferDstOptimal)	// When the renderpass starts, in which layout will the image be? => We removed image layout transition after helpers::copy_buffer_to_image, we can handle it here!
+			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR),	// When the renderpass finishes, in which layout shall the image be transfered? => The image shall be presented directly afterwards. 
+			// ------------------------------------------------------------------------------
 		// Describe the depth attachment:
 		vk::AttachmentDescription{}
 			.setFormat(vk::Format::eD32Sfloat).setSamples(vk::SampleCountFlagBits::e1)
-			// TODO Part 4: Set up 1) proper load and store operations, and 2) proper initial and final layouts for the depth attachment:
-			.setLoadOp(vk::AttachmentLoadOp::eDontCare)		// What do do with the image when the renderpass starts?
-			.setStoreOp(vk::AttachmentStoreOp::eDontCare)	// What to do with the image when the renderpass has finished?
+			// ------------------------------------------------------------------------------
+			// Task from Part 4: Set up 1) proper load and store operations, and 2) proper initial and final layouts for the depth attachment:
+			.setLoadOp(vk::AttachmentLoadOp::eClear)		// What do do with the image when the renderpass starts? => Make sure that we have cleared the content of previous frames!
+			.setStoreOp(vk::AttachmentStoreOp::eDontCare)	// What to do with the image when the renderpass has finished? => We don't need the depth buffer for anything afterwards.
 			.setInitialLayout(vk::ImageLayout::eUndefined)	// When the renderpass starts, in which layout will the image be?
-			.setFinalLayout(vk::ImageLayout::eUndefined),	// When the renderpass finishes, in which layout shall the image be transferred?
+			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),	// When the renderpass finishes, in which layout shall the image be transferred? => It will be in eDepthStencilAttachmentOptimal layout anyways.
+			// ------------------------------------------------------------------------------
 	};
 
 	// ad 2) Describe per subpass for each attachment how it is going to be used, and into which layout it shall be transferred
@@ -194,17 +203,29 @@ int main()
 	//        this renderpass, and another with whatever comes after this renderpass in a queue.
 	std::array<vk::SubpassDependency, 2> subpassDependencies{
 		vk::SubpassDependency{}
-			// TODO Part 4: Establish proper dependencies with whatever comes before (which is the imageAvailableSemaphore wait and then the command buffer that copies an explosion image to the swapchain imgae)
+			// ------------------------------------------------------------------------------
+			// Task from Part 4: Establish proper dependencies with whatever comes before (which is the imageAvailableSemaphore wait and then the command buffer that copies an explosion image to the swapchain image)
 			                    .setSrcSubpass(VK_SUBPASS_EXTERNAL) /* -> */ .setDstSubpass(0u)
-			.setSrcStageMask(vk::PipelineStageFlagBits::eTopOfPipe) /* -> */ .setDstStageMask(vk::PipelineStageFlagBits::eBottomOfPipe)
-			                   .setSrcAccessMask(vk::AccessFlags{}) /* -> */ .setDstAccessMask(vk::AccessFlags{}),
+			//     We have to wait for the transfer of helpers::copy_buffer_to_image to complete before we may render into the image.
+			//     We do not need to wait before the eColorAttachmentOutput stage, because only then we are going to write into the image.
+			 .setSrcStageMask(vk::PipelineStageFlagBits::eTransfer) /* -> */ .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+			//     The memory written helpers::copy_buffer_to_image is a eTransferWrite => make this memory available.
+			//     This memory must be visible to whatever cache/unit/ROP performs eColorAttachmentWrite. We are not going to read from it, therefore eColorAttachmentWrite is the only neccessary access type to include.
+			  .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite) /* -> */ .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite),
+			// ------------------------------------------------------------------------------
 		vk::SubpassDependency{}
-			// TODO Part 4: Establish proper dependencies with whatever comes after (which is the renderFinishedSemaphore signal) 
-			                                     .setSrcSubpass(0u) /* -> */ .setDstSubpass(VK_SUBPASS_EXTERNAL)
-			.setSrcStageMask(vk::PipelineStageFlagBits::eTopOfPipe) /* -> */ .setDstStageMask(vk::PipelineStageFlagBits::eBottomOfPipe)
-			                   .setSrcAccessMask(vk::AccessFlags{}) /* -> */ .setDstAccessMask(vk::AccessFlags{})
+			// ------------------------------------------------------------------------------
+			// Task from Part 4: Establish proper dependencies with whatever comes after (which is the renderFinishedSemaphore signal) 
+			                                                 .setSrcSubpass(0u) /* -> */ .setDstSubpass(VK_SUBPASS_EXTERNAL)
+			//     Execution may continue as soon as the eColorAttachmentOutput stage is done.
+			//     However, nothing must really wait on that stage, because afterwards comes the semaphore. Hence, eBottomOfPipe.
+			.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput) /* -> */ .setDstStageMask(vk::PipelineStageFlagBits::eBottomOfPipe)
+			//     The graphics pipeline is performing eColorAttachmentWrites. These need to be made available.
+			//     We don't have to make them visible to anything, because the semaphore performs a full memory barrier anyways. 
+			       .setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite) /* -> */ .setDstAccessMask(vk::AccessFlags{})
+			// ------------------------------------------------------------------------------
 	};
-	
+
 	auto renderpassCreateInfo = vk::RenderPassCreateInfo{}
 		.setAttachmentCount(2u) // attachmentCount and pAttachments describe 1) and a part of 2)
 		.setPAttachments(attachmentDescriptions.data())
@@ -279,6 +300,12 @@ int main()
 		sizeof(std::array<glm::mat4, 3>), 
 		vk::BufferUsageFlagBits::eUniformBuffer
 	);
+	// Oh oh, we've got a small (or big) problem with our uniformBuffer: If you look closely (it is probably better visible if you 
+	// slow down the animation a bit), you can see the 3D model's animation stuttering (moving back and forth a bit). This is because
+	// we are only using ONE uniformBuffer that contains the transformation matrices, but #CONCURRENT_FRAMES concurrent frames which
+	// are all competing against each other and writing into the SAME uniformBuffer... concurrently!
+	// TODO Part 5: Make a separate uniformBuffer for every concurrent frame and fix the animation stuttering this way!
+	//              In order to bind the different uniform buffers to the shaders, you will also need multiple descriptors!
 
 	// In order to make it available to shaders, we have to create a DESCRIPTOR for it.
 	// However, in order to create a descriptor, we have to create a DESCRIPTOR POOL first:
@@ -292,6 +319,9 @@ int main()
 	auto descriptorPool = device.createDescriptorPool(descriptorPoolCreateInfo);
 
 	// With the descriptor pool in place, let's create a descriptor for our uniform buffer:
+	//
+	// TODO Part 5: In order to make the texture ("models/p_pod_diffuse.jpg" for the 3D model) accessible, you'll have to create a resource descriptor for it, too!
+	//              The type of descriptor you are looking for is vk::DescriptorType::eCombinedImageSampler (a.k.a. VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER in C API lingo)
 	//
 	// But again: not so fast! We have to define the LAYOUT of our descriptors first
 	std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings{
@@ -361,45 +391,39 @@ int main()
 		auto commandBuffer = helpers::allocate_command_buffer(device, commandPool);
     	commandBuffer.begin(vk::CommandBufferBeginInfo{});
 
-		// TODO Part 4: Record rendering of the 3D model into commandBuffer using graphicsPipeline
-		//
-		// In order to achieve this, you will have to implement the following:
-		//
-		// 1) Begin the renderpass! (pass all the required info and clear values)
-		//    Consult the specification under 7.4. Render Pass Commands for further information:
-		//    https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#renderpass-commands
-		//
-		// 2) Bind the graphics pipeline!
-		//
-		// 3) Bind the descriptor sets!
-		//    Currently, we are only using ONE descriptor set (see "layout(set = 0, ...)" in shader code),
-		//    The descriptor set that we have created above, already contains the resource descriptor to
-		//    our uniformBuffer (it has been written to it). That means, as soon as you bind the descriptor
-		//    set correctly, the resource descriptor for the uniformBuffer will be available to the shader(s).
-		//
-		// 4) Bind the two vertex buffers that we have created above: vertexBufferPositions and vertexBufferTexCoords
-		//
-		// 5) Issue the draw call for #numberOfVertices vertices
-		//    (We don't have an index buffer, so just issue an "draw arrays"-style draw call!)
-		//
-		// You should be able to find all the required information for these steps in the specification.
-		// When you have correctly implemented this task, you should see a moving 3D model.
+		// ------------------------------------------------------------------------------
+		// Task from Part 4: Record rendering of the 3D model into commandBuffer using graphicsPipeline
+		// 
+		 std::array<vk::ClearValue, 2> clearValues {
+			vk::ClearValue{ vk::ClearColorValue{ std::array<float, 4>{1.0f, 0.0f, 0.5f, 1.0f} } },
+			vk::ClearValue{ vk::ClearDepthStencilValue{ 1.0f, 0u }}
+		};
+		auto renderPassBeginInfo = vk::RenderPassBeginInfo{}
+			.setRenderPass(renderpass)
+			.setFramebuffer(framebuffers[i])
+			.setRenderArea({{0, 0}, {WIDTH, HEIGHT}})
+			.setClearValueCount(2u).setPClearValues(clearValues.data());
+		commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+
+		commandBuffer.bindDescriptorSets(
+			vk::PipelineBindPoint::eGraphics, pipelineLayout, 
+			0u, 1u, &descriptorSets[0], // <--- Bind the actual descriptors to the pipeline
+			0u, nullptr
+		);
+
+		commandBuffer.bindVertexBuffers(0u, 2u, vertexBuffers.data(), vertexBufferOffsets.data());
+		commandBuffer.draw(numberOfVertices, 1u, 0u, 0u);
+		
+		commandBuffer.endRenderPass();
+		// ------------------------------------------------------------------------------
 
 		commandBuffer.end();
 		graphicsDrawCommandBuffers[i] = commandBuffer;
 	}
 
 	// ===> 22. Create image available semaphores, render finished semaphores, and fences, one of each PER FRAME IN FLIGHT:
-	// ------------------------------------------------------------------------------
-   	// Task from Part 3: Do not create new semaphores every frame but create them only once and reuse them!
-   	// 
-   	// Okay, why do we need multiple semaphores and even fences now?
-   	// Because we have removed the waitIdle call, we are never synchronizing the host with the device.
-   	// Our application should be able to work on #CONCURRENT_FRAMES frames at the same time, however.
-   	// Therefore -- if there are #CONCURRENT_FRAMES frames at any given time -- we have to have the
-   	// same amount of concurrently usable resources at any given time.
-   	// In order to synchronize the host with the device (i.e. wait on the CPU if the GPU is running
-   	// ahead by more than #CONCURRENT_FRAMES frames), we can wait using fences.
    	std::array<vk::Semaphore, CONCURRENT_FRAMES> imageAvailableSemaphores;
 	std::array<vk::Semaphore, CONCURRENT_FRAMES> renderFinishedSemaphores;
 	std::array<vk::Fence, CONCURRENT_FRAMES> syncHostWithDeviceFence;
@@ -408,7 +432,6 @@ int main()
 		renderFinishedSemaphores[i] = device.createSemaphore(vk::SemaphoreCreateInfo{});
 		syncHostWithDeviceFence[i] = device.createFence(vk::FenceCreateInfo{}.setFlags(vk::FenceCreateFlagBits::eSignaled));
 	}
-	// ------------------------------------------------------------------------------
 
 	// ===> 23. Start our render loop and display a wonderful sprite animation, reuse semaphores and embrace multiple frampues in flight:
 	const double startTime = glfwGetTime();
@@ -421,16 +444,13 @@ int main()
     		lastAniTime = curTime;
     	}
 
-		// ------------------------------------------------------------------------------
     	// We have to make sure that not more than #CONCURRENT_FRAMES are in flight at
     	// the same time. We can use fences to ensure that. 
-    	// 
-		static auto frameInFlightIndex = int64_t{-1};
+    	static auto frameInFlightIndex = int64_t{-1};
     	frameInFlightIndex = (frameInFlightIndex + 1) % CONCURRENT_FRAMES;
 
     	device.waitForFences(1u, &syncHostWithDeviceFence[frameInFlightIndex], VK_TRUE, std::numeric_limits<uint64_t>::max());
     	device.resetFences(1u, &syncHostWithDeviceFence[frameInFlightIndex]);
-		// ------------------------------------------------------------------------------
 
     	// Before submitting work to the queue, update data in our host coherent buffer(s):
     	auto easingFunction = [](float n) { n = 1.0f - n; return 1.0f - n*n; };
@@ -452,7 +472,7 @@ int main()
     		// Note: Selecting it based on the swapChainImageIndex and not based on the frameInFlightIndex
     		//       is not reeeaally bullet-proof. It actually assumes that frameInFlightIndex and
     		//       swapChainImageIndex change in lockstep. This is a bit a dangerous assumption. It does
-    		//       not always have to be true. Actually, to be 100% secure, one would hve to prepare the
+    		//       not always have to be true. Actually, to be 100% secure, one would have to prepare the
     		//       command buffers for each swapChainImageIndex and for each frameInFlightIndex.
     		//       Just saying.
     		//       This probably also depends on the presentation engine and the concrete presentation
@@ -482,19 +502,6 @@ int main()
     		.setPWaitSemaphores(&renderFinishedSemaphores[frameInFlightIndex]); // Wait until rendering has finished (until vkQueueSubmit has signalled the renderFinishedSemaphore)
     	queue.presentKHR(presentInfo);
 
-		// ------------------------------------------------------------------------------
-    	// Task from Part 3: Remove the waitIdle call and deal with the consequences!
-    	//  => it's gone, and has caused huge troubles.
-    	//     We have submitted endless amounts of work, because we never waited on the
-    	//     CPU for anything to finish. We just submitted, and submitted, and submitted.
-    	//     We have to ensure that the CPU and the GPU stay in sync w.r.t. their
-    	//     workloads.
-    	//     We have decided that we are going with #CONCURRENT_FRAMES concurrent
-    	//     frames. So, when we produce frame number (X + CONCURRENT_FRAMES), we have
-    	//     to make sure that frame (X) has fully completed so that we can reuse
-    	//     its resources.
-		// ------------------------------------------------------------------------------
-    	
 		glfwPollEvents();
     	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     		glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -516,6 +523,8 @@ int main()
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) { helpers::destroy_image_view(device, colorImageViews[i]); }
 	helpers::free_memory(device, depthImageMemory);
 	helpers::destroy_image(device, depthImage);
+	helpers::free_memory(device, textureMemory);
+	helpers::destroy_buffer(device, textureBuffer);
 	helpers::free_memory(device, texCoordsMemory);
 	helpers::destroy_buffer(device, vertexBufferTexCoords);
 	helpers::free_memory(device, positionsMemory);
