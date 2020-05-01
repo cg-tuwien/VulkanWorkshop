@@ -10,6 +10,7 @@ The branch of part 3 will contain the solutions.
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
+* Watch out for **`// TODO Part 2` comments** in code! All tasks are described using these.
 * Prepare command buffers and re-use them later
 * Use given images to implement a sprite animation
 
