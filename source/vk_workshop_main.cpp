@@ -300,11 +300,11 @@ int main()
 		sizeof(std::array<glm::mat4, 3>), 
 		vk::BufferUsageFlagBits::eUniformBuffer
 	);
-	// Oh oh, we've got a small (or big) problem with our uniformBuffer: If you look closely (it is probably better visible if you 
-	// slow down the animation a bit), you can see the 3D model's animation stuttering (moving back and forth a bit). This is because
+	// Oh oh, we've got a small (or big) problem with our uniformBuffer: Maybe it isn't visible, but maybe it is! In some situations,
+	// or on some GPUs (?) you can see the 3D model's translation stuttering (moving back and forth a bit). This is because
 	// we are only using ONE uniformBuffer that contains the transformation matrices, but #CONCURRENT_FRAMES concurrent frames which
 	// are all competing against each other and writing into the SAME uniformBuffer... concurrently!
-	// TODO Part 5: Make a separate uniformBuffer for every concurrent frame and fix the animation stuttering this way!
+	// TODO Part 5: Make a separate uniformBuffer for every concurrent frame and fix real/potential animation stuttering this way!
 	//              In order to bind the different uniform buffers to the shaders, you will also need multiple descriptors!
 
 	// In order to make it available to shaders, we have to create a DESCRIPTOR for it.
@@ -439,7 +439,8 @@ int main()
     	auto curTime = glfwGetTime();
     	static auto lastAniTime = startTime;
     	static auto explosionAniIndex = size_t{0};
-    	if (curTime - lastAniTime > 0.033333) {
+    	const auto animationHz = double{0.016666};
+    	if (curTime - lastAniTime > animationHz) {
     		explosionAniIndex = (explosionAniIndex + 1) % 100;
     		lastAniTime = curTime;
     	}
@@ -454,7 +455,7 @@ int main()
 
     	// Before submitting work to the queue, update data in our host coherent buffer(s):
     	auto easingFunction = [](float n) { n = 1.0f - n; return 1.0f - n*n; };
-    	float modelTranslationZ = glm::mix(-5.0f, 10.0f, easingFunction(static_cast<float>(explosionAniIndex) / 100.0f));
+    	float modelTranslationZ = glm::mix(-5.0f, 10.0f, easingFunction(static_cast<float>(explosionAniIndex) / 100.0f + (curTime - lastAniTime) / (100.0f * animationHz)));
     	auto model = glm::translate(glm::mat4{1.0f}, glm::vec3{0.0f, 0.0f, modelTranslationZ}) * glm::translate(glm::mat4{1.0f}, glm::vec3{2.0f, -2.5f, 0.0f}) * glm::rotate(glm::mat4{1.0f}, glm::radians(0.f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::mat4{1.0f}, glm::vec3{0.002f});
         auto view =  glm::inverse(glm::mat4{glm::vec4{1,0,0,0}, glm::vec4{0,-1,0,0}, glm::vec4{0,0,1,0}, glm::vec4{0,0,10,1}});
         auto proj = glm::perspective(glm::radians(90.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 20.0f);
