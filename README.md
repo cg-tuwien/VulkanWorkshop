@@ -11,6 +11,7 @@ The branch of part 2 will contain the solutions.
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
+* Watch out for **`// TODO Part 1` comments** in code! All tasks are described using these.
 * Physical device selection
 * Swap chain image format and presentation mode selection
 * Memory management
