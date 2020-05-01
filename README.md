@@ -11,7 +11,7 @@ The branch of part 6 will contain the solutions.
 * You'll find a lot of helpful information in the [Vulkan specification](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html), especially relevant for this part: [13. Resource Descriptors](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets)
 
 **Tasks**
-* Watch out for *`// TODO Part 5`* comments in code! All tasks are described using these.
+* Watch out for **`// TODO Part 5` comments** in code! All tasks are described using these.
 * Fix the stuttering animation by properly handling resources for concurrent frames once again
 * Create a texture in device memory that can be sampled in shaders
 * Create a "combined image sampler"-type descriptor for the texture
