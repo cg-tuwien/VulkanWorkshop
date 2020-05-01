@@ -136,7 +136,7 @@ namespace helpers
 	//  <2>: memory handle to the position buffer's backing memory
 	//  <3>: the buffer handle to the texture coordinates buffer
 	//  <4>: memory handle to the texture coordinates buffer's backing memory
-	std::tuple<size_t, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_of_obj(
+	std::tuple<size_t, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_and_normals_of_obj(
 		const std::string modelPath,
 		const vk::Device device,
 		const vk::PhysicalDevice physicalDevice,

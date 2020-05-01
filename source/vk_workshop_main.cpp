@@ -106,17 +106,58 @@ int main()
 	// 
 	
 	// ===> 13. Load a 3D model from file and store it into a host coherent buffer
-	auto [numberOfVertices, vertexBufferPositions, positionsMemory, vertexBufferTexCoords, texCoordsMemory]
-		= helpers::load_positions_and_texture_coordinates_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
+	auto [numberOfVertices, vertexBufferPositions, positionsMemory, vertexBufferTexCoords, texCoordsMemory, vertexBufferNormals, normalsMemory]
+		= helpers::load_positions_and_texture_coordinates_and_normals_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
 	// Combine in an array for later use when issuing the draw call:
 	std::array<vk::Buffer, 2> vertexBuffers{ vertexBufferPositions, vertexBufferTexCoords }; 
 	std::array<vk::DeviceSize, 2> vertexBufferOffsets{ 0, 0 };
 
-	auto [textureBuffer, textureMemory, textureWidth, textureHeight] = helpers::load_image_into_host_coherent_buffer(physicalDevice, device, "models/p_pod_diffuse.jpg");
-	// Wouldn't it be super-nice if the space ship was rendered with textures?
-	// TODO Part 5: Load the 3D model's texture into a vk::Image that can be used as sampled image in shaders!
-	//              The texture has been loaded from file already, but so far, its data is only in a host coherent buffer.
-	//              Transfer it into an image that is "living" in DEVICE-MEMORY!
+	auto [textureBuffer, textureBufferMemory, textureWidth, textureHeight] = helpers::load_image_into_host_coherent_buffer(physicalDevice, device, "models/p_pod_diffuse.jpg");
+	// ------------------------------------------------------------------------------
+	// Task from Part 5: Load the 3D model's texture into a vk::Image that can be used as sampled image in shaders!
+	auto [texture, textureMemory] = helpers::create_image(device, physicalDevice, textureWidth, textureHeight, vk::Format::eB8G8R8A8Unorm, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+	// transfer it into device memory:
+	auto loadIntoTextureCmdBfr = helpers::allocate_command_buffer(device, commandPool);
+    loadIntoTextureCmdBfr.begin(vk::CommandBufferBeginInfo{}.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+	helpers::establish_pipeline_barrier_with_image_layout_transition(loadIntoTextureCmdBfr, 
+		             vk::PipelineStageFlagBits::eTopOfPipe, /* src -> dst */ vk::PipelineStageFlagBits::eTransfer,
+		                                 vk::AccessFlags{}, /* src -> dst */ vk::AccessFlagBits::eTransferWrite,
+		texture,               vk::ImageLayout::eUndefined, /* old -> new */ vk::ImageLayout::eTransferDstOptimal
+	);
+
+	helpers::copy_buffer_to_image(loadIntoTextureCmdBfr, textureBuffer, texture, textureWidth, textureHeight);
+	
+	helpers::establish_pipeline_barrier_with_image_layout_transition(loadIntoTextureCmdBfr, 
+		                       vk::PipelineStageFlagBits::eTransfer, /* src -> dst */ vk::PipelineStageFlagBits::eBottomOfPipe,
+		                         vk::AccessFlagBits::eTransferWrite, /* src -> dst */ vk::AccessFlags{},
+		texture,               vk::ImageLayout::eTransferDstOptimal, /* old -> new */ vk::ImageLayout::eShaderReadOnlyOptimal
+	);
+	loadIntoTextureCmdBfr.end();
+	queue.submit({ vk::SubmitInfo{0u, nullptr, nullptr, 1u, &loadIntoTextureCmdBfr, 0u, nullptr} }, nullptr);
+	queue.waitIdle(); // We are making our lives easy here
+
+	// Crate a view onto the texture
+	auto textureImageView = helpers::create_image_view(device, physicalDevice, texture, vk::Format::eB8G8R8A8Unorm, vk::ImageAspectFlagBits::eColor);
+	
+	// Furthermore, create an image sampler
+	auto samplerCreateInfo = vk::SamplerCreateInfo{}
+		.setMinFilter(vk::Filter::eLinear)
+		.setMagFilter(vk::Filter::eLinear)
+		.setAddressModeU(vk::SamplerAddressMode::eRepeat)
+		.setAddressModeV(vk::SamplerAddressMode::eRepeat)
+		.setAddressModeW(vk::SamplerAddressMode::eRepeat)
+		.setAnisotropyEnable(VK_FALSE)
+		.setMaxAnisotropy(1.0f)
+		.setBorderColor(vk::BorderColor::eIntOpaqueBlack)
+		.setUnnormalizedCoordinates(VK_FALSE)
+		.setCompareEnable(VK_FALSE)
+		.setCompareOp(vk::CompareOp::eAlways)
+		.setMipmapMode(vk::SamplerMipmapMode::eNearest)
+		.setMinLod(0.0)
+		.setMaxLod(0.0)
+		.setMipLodBias(0.0);
+	auto sampler = device.createSampler(samplerCreateInfo);
+	// ------------------------------------------------------------------------------
 	
 	// ===> 14. Create an image to be used as depth attachment
 	auto [depthImage, depthImageMemory] = helpers::create_image(
@@ -282,7 +323,7 @@ int main()
 	// ===> 19. Create resource descriptors on the GPU
 	// First, let's create uniform buffers to be used concurrently and in shaders:
 	// ------------------------------------------------------------------------------
-	// Task from Part 5: Make a separate uniformBuffer for every concurrent frame and fix the animation stuttering this way!
+	// Task from Part 5: Make a separate uniformBuffer for every concurrent frame and fix real/potential animation stuttering this way!
 	std::array<std::tuple<vk::Buffer, vk::DeviceMemory>, CONCURRENT_FRAMES> ubos;
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
 		ubos[i] = helpers::create_host_coherent_buffer_and_memory(
@@ -292,11 +333,14 @@ int main()
 		);
 	}
 
-
 	// In order to make it available to shaders, we have to create a DESCRIPTOR for it.
 	// However, in order to create a descriptor, we have to create a DESCRIPTOR POOL first:
-	std::array<vk::DescriptorPoolSize, 1> poolSizes{ // Descriptors are also allocated from pools---make sure that the pool is large enough for our requirements.
-		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1u)
+	std::array<vk::DescriptorPoolSize, 2> poolSizes{ // Descriptors are also allocated from pools---make sure that the pool is large enough for our requirements.
+		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1u),
+		// ------------------------------------------------------------------------------
+		// Task from Part 5: In order to create the additional eCombinedImageSamplers, we have to extend our pool size
+		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(1u)
+		// ------------------------------------------------------------------------------
 	};
 	auto descriptorPoolCreateInfo = vk::DescriptorPoolCreateInfo{}
 		.setMaxSets(CONCURRENT_FRAMES)
@@ -306,12 +350,13 @@ int main()
 
 	// With the descriptor pool in place, let's create a descriptor for our uniform buffer:
 	//
-	// TODO Part 5: In order to make the texture ("models/p_pod_diffuse.jpg" for the 3D model) accessible, you'll have to create a resource descriptor for it, too!
-	//              The type of descriptor you are looking for is vk::DescriptorType::eCombinedImageSampler (a.k.a. VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER in C API lingo)
-	//
 	// But again: not so fast! We have to define the LAYOUT of our descriptors first
-	std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings{
-		vk::DescriptorSetLayoutBinding{ 0u, vk::DescriptorType::eUniformBuffer, 1u, vk::ShaderStageFlagBits::eVertex }
+	std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings{
+		vk::DescriptorSetLayoutBinding{ 0u, vk::DescriptorType::eUniformBuffer, 1u, vk::ShaderStageFlagBits::eVertex },
+		// ------------------------------------------------------------------------------
+		// Task from Part 5: The new descriptor has to be added to the pipeline layout, we are using "layout(set = 0, binding = 1)" in shaders => binding 1 in this descriptor set
+		vk::DescriptorSetLayoutBinding{ 1u, vk::DescriptorType::eCombinedImageSampler, 1u, vk::ShaderStageFlagBits::eFragment }
+		// ------------------------------------------------------------------------------
 	};
 	auto descriptorSetLayout = device.createDescriptorSetLayout(
 		vk::DescriptorSetLayoutCreateInfo{}
@@ -334,12 +379,23 @@ int main()
 	//  => let's fill them with some useful data, a.k.a. WRITE into the DESCRIPTORS
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
 		auto uniformBufferInfo = vk::DescriptorBufferInfo{}.setBuffer(std::get<vk::Buffer>(ubos[i])).setOffset(0).setRange(sizeof(std::array<glm::mat4, 3>));
-		std::array<vk::WriteDescriptorSet, 1> writes{
+		// ------------------------------------------------------------------------------
+		auto imageInfo = vk::DescriptorImageInfo{}.setImageView(textureImageView).setSampler(sampler).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+		// ------------------------------------------------------------------------------
+		std::array<vk::WriteDescriptorSet, 2> writes{
 			vk::WriteDescriptorSet{}
 				.setDstSet(descriptorSets[i])
 				.setDstBinding(0u)
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(1u).setPBufferInfo(&uniformBufferInfo)
+				.setDescriptorCount(1u).setPBufferInfo(&uniformBufferInfo),
+			// ------------------------------------------------------------------------------
+			// Task from Part 5: In order to make the texture ("models/p_pod_diffuse.jpg" for the 3D model) accessible, you'll have to create a resource descriptor for it, too!
+			vk::WriteDescriptorSet{}
+				.setDstSet(descriptorSets[i])
+				.setDstBinding(1u)
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(1u).setPImageInfo(&imageInfo)
+			// ------------------------------------------------------------------------------
 		};
 		// And perform the actual write:
 		device.updateDescriptorSets(static_cast<uint32_t>(writes.size()), writes.data(), 0u, nullptr);
@@ -421,6 +477,26 @@ int main()
 		syncHostWithDeviceFence[i] = device.createFence(vk::FenceCreateInfo{}.setFlags(vk::FenceCreateFlagBits::eSignaled));
 	}
 
+	//
+	// Wouldn't it be the culmination of this little application if the explosion was reflected by the space ship?
+	// TODO Part 6: Make the space ship reflect the explosion in the background!
+	//              There are several things to consider:
+	//               - First of all, the background images aren't vk::Images yet. They are just "stupid" buffers 
+	//                 so far. How do you tranfer their contents into textures that can be sampled in shaders?
+	//               - Do you make only one of the explosion-textures(?) available to shaders or all 100 of them?
+	//               - How do you ensure proper handling of concurrent frames?
+	//               - For the reflection itself, you could just keep it simple: Assume a fixed viewer position
+	//                 in shaders. You can also implement a more complicated approach and pass the position via
+	//                 UBO. It's up to you.
+	//               - "But," I hear you say "for reflections we do not have normals passed to shaders yet?!" ... :O !!
+	//
+	// Good luck with the last task of this workshop!
+	// I hope it proved to be a valuable Vulkan learning resource to you.
+	// Please send your feedback to junt@cg.tuwien.ac.at and if you would like to contribute or report issues, so so on GitHub!
+	//
+	// Now go and implement those reflectons! Make it so.
+	// 
+	
 	// ===> 23. Start our render loop and display a wonderful sprite animation, reuse semaphores and embrace multiple frampues in flight:
 	const double startTime = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
@@ -467,6 +543,12 @@ int main()
     		//       This probably also depends on the presentation engine and the concrete presentation
     		//       mode that is being used. If you are interested in investigating this further, you
     		//       are highly encouraged to play around with the parameters.
+    		//       
+    		// TODO Part 6 (optional/bonus-task): Read the above ^ note and think about solution strategies and/or develop them!
+    		//       Of course, we could prepare 900 command buffers... but is that a good idea?
+    		//       Does this problem even exist with all swap chain presentation modes? It would
+    		//       be a good idea to start researching about presentation modes, analyze their
+    		//       characteristics, and based on that knowledge, come up with solutions.
 
     		// 2nd command buffer: Draw our model with the recorded commands buffers that use our graphics pipeline
     		graphicsDrawCommandBuffers[frameInFlightIndex]
@@ -514,9 +596,15 @@ int main()
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) { helpers::destroy_image_view(device, colorImageViews[i]); }
 	helpers::free_memory(device, depthImageMemory);
 	helpers::destroy_image(device, depthImage);
+	device.destroySampler(sampler);
+	helpers::destroy_image_view(device, textureImageView);
 	helpers::free_memory(device, textureMemory);
+	helpers::destroy_image(device, texture);
+	helpers::free_memory(device, textureBufferMemory);
 	helpers::destroy_buffer(device, textureBuffer);
 	helpers::free_memory(device, texCoordsMemory);
+	helpers::destroy_buffer(device, vertexBufferNormals);
+	helpers::free_memory(device, normalsMemory);
 	helpers::destroy_buffer(device, vertexBufferTexCoords);
 	helpers::free_memory(device, positionsMemory);
 	helpers::destroy_buffer(device, vertexBufferPositions);

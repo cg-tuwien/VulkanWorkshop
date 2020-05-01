@@ -286,7 +286,7 @@ namespace helpers
 		device.destroy();
 	}
 
-	std::tuple<size_t, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_of_obj(
+	std::tuple<size_t, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_and_normals_of_obj(
 		const std::string modelPath,
 		const vk::Device device,
 		const vk::PhysicalDevice physicalDevice,
@@ -305,6 +305,7 @@ namespace helpers
 
 		std::vector<glm::vec3> positions;
 		std::vector<glm::vec2> textureCoordinates;
+		std::vector<glm::vec3> normals;
 		
         for (const auto& shape : shapes) {
         	if (!submeshNamesToExclude.empty() && shape.name.find("tile") != std::string::npos) {
@@ -312,14 +313,22 @@ namespace helpers
         	}
         	
             for (const auto& index : shape.mesh.indices) {
-                positions.emplace_back(
+
+            	positions.emplace_back(
 					attrib.vertices[3 * index.vertex_index + 0], 
 					attrib.vertices[3 * index.vertex_index + 1], 
 					attrib.vertices[3 * index.vertex_index + 2]
 				);
+            	
 				textureCoordinates.emplace_back(
 					attrib.texcoords[2 * index.texcoord_index + 0],
                     1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+				);
+
+            	normals.emplace_back(
+					attrib.normals[3 * index.vertex_index + 0], 
+					attrib.normals[3 * index.vertex_index + 1], 
+					attrib.normals[3 * index.vertex_index + 2]
 				);
             }
         }
@@ -364,8 +373,28 @@ namespace helpers
 		memcpy(texcoMappedMemory, textureCoordinates.data(), texcoBufferCreateInfo.size);
 		device.unmapMemory(texcoMemory);
 
+		// 2. NORMALS BUFFER
+		// Create the buffer:
+		auto nrmBufferCreateInfo = vk::BufferCreateInfo{}
+			.setSize(static_cast<vk::DeviceSize>(sizeof(normals[0]) * normals.size()))
+			.setUsage(vk::BufferUsageFlagBits::eVertexBuffer); // <--- Mind the usage flags!
+		auto nrmBuffer = device.createBuffer(nrmBufferCreateInfo);
+		
+		// Allocate backing memory:
+		auto nrmMemory = helpers::allocate_host_coherent_memory_for_given_requirements(physicalDevice, device, 
+			nrmBufferCreateInfo.size,
+			device.getBufferMemoryRequirements(nrmBuffer)
+		);
+
+		device.bindBufferMemory(nrmBuffer, nrmMemory, 0);
+		
+		// Copy the texture coordinates into the buffer:
+		auto nrmMappedMemory = device.mapMemory(nrmMemory, 0, nrmBufferCreateInfo.size);
+		memcpy(nrmMappedMemory, normals.data(), nrmBufferCreateInfo.size);
+		device.unmapMemory(nrmMemory);
+
 		// Done => return:
-		return std::make_tuple(positions.size(), posBuffer, posMemory, texcoBuffer, texcoMemory);
+		return std::make_tuple(positions.size(), posBuffer, posMemory, texcoBuffer, texcoMemory, nrmBuffer, nrmMemory);
 	}
 
 	std::tuple<vk::Image, vk::DeviceMemory> create_image(
