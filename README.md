@@ -77,4 +77,4 @@ The individual workshop units are listed below. Each unit's initial code version
 * [Part 3: Concurrent Frames](https://github.com/cg-tuwien/VulkanWorkshop/tree/part3)
 * [Part 4: Renderpass and Graphics Pipeline](https://github.com/cg-tuwien/VulkanWorkshop/tree/part4)
 * [Part 5: Descriptors and Textures](https://github.com/cg-tuwien/VulkanWorkshop/tree/part5)
-* [Part 6: Reflections](https://github.com/cg-tuwien/VulkanWorkshop/tree/part6)
+* [Part 6: Reflect on it](https://github.com/cg-tuwien/VulkanWorkshop/tree/part6)
