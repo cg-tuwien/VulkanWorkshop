@@ -111,12 +111,16 @@ int main()
 	// 
 	
 	// ===> 13. Load a 3D model from file and store it into a host coherent buffer
-	auto [numberOfVertices, vertexBufferPositions, positionsMemory, vertexBufferTexCoords, texCoordsMemory]
-		= helpers::load_positions_and_texture_coordinates_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
+	auto [numberOfVertices, vertexBufferPositions, positionsMemory, vertexBufferTexCoords, texCoordsMemory, vertexBufferNormals, normalsMemory]
+		= helpers::load_positions_and_texture_coordinates_and_normals_of_obj("models/hextraction_pod.obj", device, physicalDevice, "tile");
 	// Combine in an array for later use when issuing the draw call:
 	std::array<vk::Buffer, 2> vertexBuffers{ vertexBufferPositions, vertexBufferTexCoords }; 
 	std::array<vk::DeviceSize, 2> vertexBufferOffsets{ 0, 0 };
 
+	// We don't need the normals (yet...)
+	helpers::free_memory(device, normalsMemory);
+	helpers::destroy_buffer(device, vertexBufferNormals);
+	
 	auto [textureBuffer, textureMemory, textureWidth, textureHeight] = helpers::load_image_into_host_coherent_buffer(physicalDevice, device, "models/p_pod_diffuse.jpg");
 	// Wouldn't it be super-nice if the space ship was rendered with textures?
 	// TODO Part 5: Load the 3D model's texture into a vk::Image that can be used as sampled image in shaders!
@@ -310,7 +314,7 @@ int main()
 	// In order to make it available to shaders, we have to create a DESCRIPTOR for it.
 	// However, in order to create a descriptor, we have to create a DESCRIPTOR POOL first:
 	std::array<vk::DescriptorPoolSize, 1> poolSizes{ // Descriptors are also allocated from pools---make sure that the pool is large enough for our requirements.
-		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1u)
+		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1u * CONCURRENT_FRAMES)
 	};
 	auto descriptorPoolCreateInfo = vk::DescriptorPoolCreateInfo{}
 		.setMaxSets(CONCURRENT_FRAMES)
