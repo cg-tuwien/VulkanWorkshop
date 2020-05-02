@@ -336,10 +336,10 @@ int main()
 	// In order to make it available to shaders, we have to create a DESCRIPTOR for it.
 	// However, in order to create a descriptor, we have to create a DESCRIPTOR POOL first:
 	std::array<vk::DescriptorPoolSize, 2> poolSizes{ // Descriptors are also allocated from pools---make sure that the pool is large enough for our requirements.
-		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1u),
+		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1u * CONCURRENT_FRAMES),
 		// ------------------------------------------------------------------------------
 		// Task from Part 5: In order to create the additional eCombinedImageSamplers, we have to extend our pool size
-		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(1u)
+		vk::DescriptorPoolSize{}.setType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(1u * CONCURRENT_FRAMES)
 		// ------------------------------------------------------------------------------
 	};
 	auto descriptorPoolCreateInfo = vk::DescriptorPoolCreateInfo{}
