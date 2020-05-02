@@ -117,7 +117,7 @@ int main()
 
 	// Showing only a single color is -- for most of us probably -- a bit boring. Let's make something more fancy, shall we?
 	// TODO Part 2: Load 100 images from file, which contain a sprite-animation of an explosion!
-	//              The images can be loaded from: "images/explostion02HD-frame001.tga".."images/explostion02HD-frame100.tga"
+	//              The images can be loaded from: "images/explosion02HD-frame001.tga".."images/explosion02HD-frame100.tga"
 	//              Feel free to use helpers::load_image_into_host_coherent_buffer
 
 	// With these images loaded, we would like to copy them into the swapchain image.. just as we have done with the clear colors in Part 1.
