@@ -420,7 +420,8 @@ int main()
     	auto curTime = glfwGetTime();
     	static auto lastAniTime = startTime;
     	static auto explosionAniIndex = size_t{0};
-    	if (curTime - lastAniTime > 0.033333) {
+    	const auto animationHz = double{0.016666};
+    	if (curTime - lastAniTime > animationHz) {
     		explosionAniIndex = (explosionAniIndex + 1) % 100;
     		lastAniTime = curTime;
     	}
