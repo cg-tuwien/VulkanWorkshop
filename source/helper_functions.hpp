@@ -20,7 +20,7 @@ namespace helpers
 	// Create a surface to draw on
 	VkSurfaceKHR create_surface(
 		GLFWwindow* window, 
-		vk::Instance vulkanInstance
+		const vk::Instance vulkanInstance
 	);
 
 	// Create a surface that has been created with CreateSurface
@@ -76,7 +76,7 @@ namespace helpers
 	std::tuple<vk::Buffer, vk::DeviceMemory, int, int> load_image_into_host_coherent_buffer(
 		const vk::PhysicalDevice physicalDevice,
 		const vk::Device device,
-		std::string pathToImageFile
+		const std::string pathToImageFile
 	);
 
 	// Free memory that has been allocated with AllocateHostCoherentMemoryForBuffer
@@ -110,11 +110,11 @@ namespace helpers
 	//  - image layout transitions: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#synchronization-image-layout-transitions
 	// 
 	void establish_pipeline_barrier_with_image_layout_transition(
-		vk::CommandBuffer commandBuffer,
-		vk::PipelineStageFlags srcPipelineStage, vk::PipelineStageFlags dstPipelineStage,
-		vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
-		vk::Image image,
-		vk::ImageLayout oldLayout, vk::ImageLayout newLayout
+		const vk::CommandBuffer commandBuffer,
+		const vk::PipelineStageFlags srcPipelineStage, const vk::PipelineStageFlags dstPipelineStage,
+		const vk::AccessFlags srcAccessMask, const vk::AccessFlags dstAccessMask,
+		const vk::Image image,
+		const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout
 	);
 
 	// Record copying a buffer to an image into the given command buffer.
@@ -123,9 +123,80 @@ namespace helpers
 	// This is a convenience function. Feel free to manually perform the copy using vkCmdCopyBufferToImage.
 	// 
 	void copy_buffer_to_image(
-		vk::CommandBuffer commandBuffer,
-		vk::Buffer buffer,
-		vk::Image image, uint32_t width, uint32_t height
+		const vk::CommandBuffer commandBuffer,
+		const vk::Buffer buffer,
+		const vk::Image image, const uint32_t width, const uint32_t height
 	);
 
+	// Loads the given 3D .obj model from file, and load its positions (vec3) and texture
+	// coordinates (vec2) into two newly created, host-coherent buffers.
+	// Returs a tuple containing:
+	//  <0>: The number of vertices that the loaded model consists of and that have been stored into the buffers
+	//  <1>: the buffer handle to the positions buffer
+	//  <2>: memory handle to the position buffer's backing memory
+	//  <3>: the buffer handle to the texture coordinates buffer
+	//  <4>: memory handle to the texture coordinates buffer's backing memory
+	std::tuple<size_t, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory, vk::Buffer, vk::DeviceMemory> load_positions_and_texture_coordinates_and_normals_of_obj(
+		const std::string modelPath,
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const std::string submeshNamesToExclude = ""
+	);
+
+	// Creates a new image with backing memory
+	// Returns a tuple containing <0>: the image handle, <1>: the handle to the image's memory
+	std::tuple<vk::Image, vk::DeviceMemory> create_image(
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const uint32_t width, const uint32_t height, const vk::Format format, const vk::ImageUsageFlags usageFlags
+	);
+
+	// Destroy an image that has been created using the helper functions
+	void destroy_image(
+		const vk::Device device,
+		vk::Image image
+	);
+
+	// Create an image view to an image
+	vk::ImageView create_image_view(
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const vk::Image image, const vk::Format format, const vk::ImageAspectFlags imageAspectFlags
+	);
+
+	// Destroy an image view that has been created using the helper functions
+	void destroy_image_view(
+		const vk::Device device,
+		vk::ImageView imageView
+	);
+
+	// Load a shader from file and create a shader module
+	std::tuple<vk::ShaderModule, vk::PipelineShaderStageCreateInfo> load_shader_and_create_shader_module_and_stage_info(
+		const vk::Device device,
+		const std::string path,
+		const vk::ShaderStageFlagBits shaderStage
+	);
+
+	// Destroy a shader module that has been created using the helper functions
+	void destroy_shader_module(
+		const vk::Device device,
+		vk::ShaderModule shaderModule
+	);
+
+	// Create a host coherent buffer with backing memory
+	std::tuple<vk::Buffer, vk::DeviceMemory> create_host_coherent_buffer_and_memory(
+		const vk::Device device,
+		const vk::PhysicalDevice physicalDevice,
+		const size_t bufferSize, 
+		const vk::BufferUsageFlags bufferUsageFlags
+	);
+
+	// Copy data of the gifen size into the buffer
+	void copy_data_into_host_coherent_memory(
+		const vk::Device device,
+		const size_t dataSize,
+		const void* data, 
+		vk::DeviceMemory memory
+	);
+	
 }
