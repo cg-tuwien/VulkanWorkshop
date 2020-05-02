@@ -7,7 +7,7 @@ The branch of part 3 will contain the solutions.
 **Preparations** 
 * Make sure to have read the `README.md` file in the [`master`](https://github.com/cg-tuwien/VulkanWorkshop) branch
 * It is highly recommended to watch the [Introduction to Vulkan](https://youtu.be/ZWV6zvKe9Hc) lecture 
-* Watch the [Vulkan Workshop Part 2](https://youtu.be/_dPnOBpUdPs) video
+* Watch the [Vulkan Workshop Part 2](https://youtu.be/_dPnOBpUdPs) video (also discusses solutions to [Part 1](https://github.com/cg-tuwien/VulkanWorkshop/tree/part1))
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
