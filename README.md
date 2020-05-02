@@ -13,7 +13,7 @@ There are no solutions to the tasks of this part yet. They will be provided at a
 * You'll find a lot of helpful information in the [Vulkan specification](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html)
 
 **Tasks**
-* Implement reflections in the fragment shader! Also reflect on the current application structure --- which changes do you have to make in order to enable that?
+* Implement reflections in the fragment shader! Also reflect on the current application structure: Which changes do you have to make in order to enable that?
 * There is an optional/bonus task about the 300 prepared command buffers from [Part 2](https://github.com/cg-tuwien/VulkanWorkshop/tree/part2)
 
 **Navigation**
