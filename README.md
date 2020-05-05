@@ -53,7 +53,7 @@ For all required `#include` statements, please make sure to include everything t
 Modern C++ is used throughout this workshop's code.
 
 **Vulkan-Hpp**     
-This tutorial uses Vulkan-Hpp which are C++ bindings for the Vulkan C API. It is a preference of taste, but they can make development a bit more convenient. 
+This tutorial uses Vulkan-Hpp which are C++ bindings for the Vulkan C API. It is a matter of taste, but they can make development a bit more convenient. 
 
 The names translate 1:1 between the C API interface and the Vulkan-Hpp interface. Some examples: 
 * C: `vkCreateInstance` -> Vulkan-Hpp: `vk::createInstance`
