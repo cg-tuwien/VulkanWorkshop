@@ -2,9 +2,9 @@
 
 Vulkan Workshop, originally created for the [CESCG 2020](https://cescg.org), but made available for everyone.
 
-This workshop is intended for programmers who have already some experience with C++ and an older/higher-level graphics API like OpenGL. It will teach some of the most important concepts and usages of the low-level Vulkan graphics API. Depending on your working style and previous experience, a very rough estimation is that you will be able to complete the whole workshop in approximately 2 days (+/- 1 day). 
-
 Developed and presented by [Johannes Unterguggenberger](https://www.cg.tuwien.ac.at/staff/JohannesUnterguggenberger.html), University Assistant at the [Research Unit of Computer Graphics](https://www.cg.tuwien.ac.at/), Institute of Visual Computing & Human-Centered Technology, TU Wien, Austria.
+
+**This workshop** is intended for programmers who have already some experience with C++ and an older/higher-level graphics API like OpenGL. It will teach some of the most important concepts and usages of the low-level Vulkan graphics API. Depending on your working style and previous experience, a very rough estimation is that you will be able to complete the whole workshop in approximately 2 days (+/- 1 day). 
 
 **Vulkan** is a (relatively) new graphics API from The Khronos Group. It is a completely different type of API than OpenGL. Not only is it more modern, it is much more explicit and notably lower-level than OpenGL. A programmer needs to take care of many things that weren't required to be taken care of with OpenGL. 
 
