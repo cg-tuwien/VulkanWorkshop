@@ -1,6 +1,6 @@
 # Vulkan Workshop
 
-Vulkan Workshop, originally created for the [CESCG 2020](https://cescg.org), but made available for everyone.
+Vulkan Workshop, originally created for the [CESCG 2020](https://cescg.org), made available for everyone.
 
 Developed and presented by [Johannes Unterguggenberger](https://www.cg.tuwien.ac.at/staff/JohannesUnterguggenberger.html), University Assistant at the [Research Unit of Computer Graphics](https://www.cg.tuwien.ac.at/), Institute of Visual Computing & Human-Centered Technology, TU Wien, Austria.
 
