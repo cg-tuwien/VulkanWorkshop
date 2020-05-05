@@ -56,11 +56,11 @@ Modern C++ is used throughout this workshop's code.
 This tutorial uses Vulkan-Hpp which are C++ bindings for the Vulkan C API. It is a matter of taste, but they can make development a bit more convenient. 
 
 The names translate 1:1 between the C API interface and the Vulkan-Hpp interface. Some examples: 
-* C: `vkCreateInstance` <-> Vulkan-Hpp: `vk::createInstance`
-* C: `vkCreateDevice(physicalDevice, ...)` <-> Vulkan-Hpp: `physicalDevice.createDevice(...)`
-* C: `vkCreateSemaphore(device, ...)` <-> Vulkan-Hpp: `device.createSemaphore(...)`
-* C: `vkCmdPipelineBarrier(commandBuffer, ...)` <-> Vulkan-Hpp: `commandBuffer.pipelineBarrier(...)`
-* C: `vkCmdCopyBufferToImage(commandBuffer, ...)` <-> Vulkan-Hpp: `commandBuffer.copyBufferToImage(...)`
+* C API: `vkCreateInstance` <-> Vulkan-Hpp: `vk::createInstance`
+* C API: `vkCreateDevice(physicalDevice, ...)` <-> Vulkan-Hpp: `physicalDevice.createDevice(...)`
+* C API: `vkCreateSemaphore(device, ...)` <-> Vulkan-Hpp: `device.createSemaphore(...)`
+* C API: `vkCmdPipelineBarrier(commandBuffer, ...)` <-> Vulkan-Hpp: `commandBuffer.pipelineBarrier(...)`
+* C API: `vkCmdCopyBufferToImage(commandBuffer, ...)` <-> Vulkan-Hpp: `commandBuffer.copyBufferToImage(...)`
 
 For more information, please refer to [KhronosGroup/Vulkan-Hpp](https://github.com/KhronosGroup/Vulkan-Hpp).
 
