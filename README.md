@@ -60,7 +60,7 @@ The names translate 1:1 between the C API interface and the Vulkan-Hpp interface
 * C: `vkCreateDevice(physicalDevice, ...)` -> Vulkan-Hpp: `physicalDevice.createDevice(...)`
 * C: `vkCreateSemaphore(device, ...)` -> Vulkan-Hpp: `device.createSemaphore(...)`
 * C: `vkCmdPipelineBarrier(commandBuffer, ...)` -> Vulkan-Hpp: `commandBuffer.pipelineBarrier(...)`
-* C: `vkCmdCopyBufferToImage(commandBuffer, ...)` -> Vulkan-Hpp: `ommandBuffer.copyBufferToImage(...)`
+* C: `vkCmdCopyBufferToImage(commandBuffer, ...)` -> Vulkan-Hpp: `commandBuffer.copyBufferToImage(...)`
 
 For more information, please refer to [KhronosGroup/Vulkan-Hpp](https://github.com/KhronosGroup/Vulkan-Hpp).
 
