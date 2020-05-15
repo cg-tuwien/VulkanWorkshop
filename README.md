@@ -7,7 +7,7 @@ The branch of part 2 will contain the solutions.
 **Preparations** 
 * Make sure to have read the `README.md` file in the [`master`](https://github.com/cg-tuwien/VulkanWorkshop) branch
 * It is highly recommended to watch the [Introduction to Vulkan](https://youtu.be/ZWV6zvKe9Hc) lecture 
-* Watch the [Vulkan Workshop, Part 1](https://youtu.be/Slu60iIxOn8) video
+* Watch the [Vulkan Workshop, Part 1](https://youtu.be/6ePRxfAom0o) video
 * Read further documentation and instructions directly in the source code
 
 **Tasks**
